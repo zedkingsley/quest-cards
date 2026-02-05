@@ -1,0 +1,109 @@
+{
+  "slug": "starter-pack",
+  "name": "Starter Pack",
+  "description": "A mix of fun challenges to get started. Perfect first quests!",
+  "icon": "⭐",
+  "category": "mixed",
+  "challenges": [
+    {
+      "slug": "make-your-bed-7-days",
+      "title": "Bed Boss",
+      "description": "Make your bed every morning for 7 days in a row!",
+      "icon": "🛏️",
+      "difficulty": "easy",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "1 week"
+    },
+    {
+      "slug": "try-new-food",
+      "title": "Brave Bite",
+      "description": "Try a new food you've never eaten before. One real bite!",
+      "icon": "🍽️",
+      "difficulty": "easy",
+      "reward_type": "money",
+      "reward_value": "$2",
+      "time_estimate": "1 day"
+    },
+    {
+      "slug": "learn-joke",
+      "title": "Joke Teller",
+      "description": "Learn a joke and tell it to 3 different people!",
+      "icon": "😂",
+      "difficulty": "easy",
+      "reward_type": "money",
+      "reward_value": "$2",
+      "time_estimate": "1 day"
+    },
+    {
+      "slug": "help-without-asking",
+      "title": "Secret Helper",
+      "description": "Do something helpful without being asked. Surprise someone!",
+      "icon": "🦸",
+      "difficulty": "easy",
+      "reward_type": "money",
+      "reward_value": "$2",
+      "time_estimate": "1 day"
+    },
+    {
+      "slug": "read-new-book",
+      "title": "Book Explorer",
+      "description": "Read a book you've never read before (or have someone read it to you).",
+      "icon": "📚",
+      "difficulty": "easy",
+      "reward_type": "money",
+      "reward_value": "$2",
+      "time_estimate": "1 day"
+    },
+    {
+      "slug": "draw-family",
+      "title": "Family Portrait",
+      "description": "Draw a picture of your family. Include everyone!",
+      "icon": "👨‍👩‍👧",
+      "difficulty": "easy",
+      "reward_type": "money",
+      "reward_value": "$2",
+      "time_estimate": "30 minutes"
+    },
+    {
+      "slug": "learn-5-words",
+      "title": "Word Collector",
+      "description": "Learn 5 new words this week. Use each one in a sentence!",
+      "icon": "📝",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "1 week"
+    },
+    {
+      "slug": "clean-room",
+      "title": "Room Rescue",
+      "description": "Clean your whole room without any reminders!",
+      "icon": "✨",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "1 hour"
+    },
+    {
+      "slug": "compliment-spree",
+      "title": "Kindness Quest",
+      "description": "Give 5 genuine compliments to different people today!",
+      "icon": "💝",
+      "difficulty": "easy",
+      "reward_type": "money",
+      "reward_value": "$2",
+      "time_estimate": "1 day"
+    },
+    {
+      "slug": "morning-routine-solo",
+      "title": "Morning Champion",
+      "description": "Do your whole morning routine by yourself for 3 days!",
+      "icon": "🌅",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$4",
+      "time_estimate": "3 days"
+    }
+  ]
+}

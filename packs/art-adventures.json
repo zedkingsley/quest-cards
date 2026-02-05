@@ -1,0 +1,89 @@
+{
+  "slug": "art-adventures",
+  "name": "Art Adventures",
+  "description": "Creative challenges for little artists. Draw, paint, build, create!",
+  "icon": "🎨",
+  "category": "creative",
+  "challenges": [
+    {
+      "slug": "monster-maker",
+      "title": "Monster Maker",
+      "description": "Design your own monster! Give it a name and special powers.",
+      "icon": "👹",
+      "difficulty": "easy",
+      "reward_type": "money",
+      "reward_value": "$2",
+      "time_estimate": "30 minutes"
+    },
+    {
+      "slug": "nature-art",
+      "title": "Nature Artist",
+      "description": "Make art using only things from outside - leaves, sticks, rocks!",
+      "icon": "🍂",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "1 hour"
+    },
+    {
+      "slug": "cardboard-creation",
+      "title": "Box Builder",
+      "description": "Build something cool from cardboard boxes. Robot? Castle? Spaceship?",
+      "icon": "📦",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$4",
+      "time_estimate": "2 hours"
+    },
+    {
+      "slug": "self-portrait",
+      "title": "Mirror Me",
+      "description": "Look in a mirror and draw yourself! Try to get the details right.",
+      "icon": "🪞",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "30 minutes"
+    },
+    {
+      "slug": "color-mixing",
+      "title": "Color Scientist",
+      "description": "Mix paints to create 5 new colors. Name each one!",
+      "icon": "🌈",
+      "difficulty": "easy",
+      "reward_type": "money",
+      "reward_value": "$2",
+      "time_estimate": "30 minutes"
+    },
+    {
+      "slug": "comic-strip",
+      "title": "Comic Creator",
+      "description": "Draw a comic strip with at least 4 panels. Tell a story!",
+      "icon": "💭",
+      "difficulty": "hard",
+      "reward_type": "money",
+      "reward_value": "$5",
+      "time_estimate": "1 hour"
+    },
+    {
+      "slug": "gift-art",
+      "title": "Gift of Art",
+      "description": "Make a piece of art as a gift for someone. Give it to them!",
+      "icon": "🎁",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "1 hour"
+    },
+    {
+      "slug": "playdough-zoo",
+      "title": "Dough Zoo",
+      "description": "Make 5 different animals out of playdough or clay.",
+      "icon": "🦁",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "45 minutes"
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "slug": "brain-games",
+  "name": "Brain Games",
+  "description": "Puzzles, riddles, and learning challenges to grow your brain!",
+  "icon": "🧠",
+  "category": "learning",
+  "challenges": [
+    {
+      "slug": "memorize-poem",
+      "title": "Poem Master",
+      "description": "Memorize a short poem and recite it to your family!",
+      "instructions": "Pick a poem that's 4-8 lines long. Practice a little each day. When you're ready, perform it!",
+      "icon": "📜",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$4",
+      "time_estimate": "1 week"
+    },
+    {
+      "slug": "teach-game",
+      "title": "Game Teacher",
+      "description": "Learn a new game, then teach it to someone else!",
+      "instructions": "1. Learn a card game, board game, or outdoor game\n2. Practice until you know the rules well\n3. Teach it to a family member or friend\n4. Play it together!",
+      "icon": "🎲",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$4",
+      "time_estimate": "3 days"
+    },
+    {
+      "slug": "riddle-collector",
+      "title": "Riddle Riddler",
+      "description": "Learn 3 riddles and stump your family with them!",
+      "icon": "❓",
+      "difficulty": "easy",
+      "reward_type": "money",
+      "reward_value": "$2",
+      "time_estimate": "1 day"
+    },
+    {
+      "slug": "counting-challenge",
+      "title": "Count Master",
+      "description": "Count to 100 out loud without any mistakes!",
+      "icon": "🔢",
+      "difficulty": "easy",
+      "reward_type": "money",
+      "reward_value": "$2",
+      "time_estimate": "15 minutes"
+    },
+    {
+      "slug": "puzzle-complete",
+      "title": "Puzzle Pro",
+      "description": "Complete a jigsaw puzzle by yourself. At least 50 pieces!",
+      "icon": "🧩",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "2 hours"
+    },
+    {
+      "slug": "science-question",
+      "title": "Wonder Asker",
+      "description": "Ask a 'why' or 'how' question about the world. Research the answer together!",
+      "instructions": "Think of something you're curious about:\n- Why is the sky blue?\n- How do planes fly?\n- Why do we dream?\n\nLook up the answer with a grown-up and explain what you learned!",
+      "icon": "🔬",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "1 hour"
+    },
+    {
+      "slug": "backwards-alphabet",
+      "title": "Alphabet Ace",
+      "description": "Say the alphabet backwards without looking!",
+      "icon": "🔤",
+      "difficulty": "hard",
+      "reward_type": "money",
+      "reward_value": "$5",
+      "time_estimate": "1 week"
+    },
+    {
+      "slug": "memory-game",
+      "title": "Memory Champ",
+      "description": "Beat a family member at a memory matching game 3 times!",
+      "icon": "🃏",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "1 week"
+    }
+  ]
+}

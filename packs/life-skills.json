@@ -1,0 +1,91 @@
+{
+  "slug": "life-skills",
+  "name": "Life Skills",
+  "description": "Real-world skills that last a lifetime. Learn by doing!",
+  "icon": "🌟",
+  "category": "life-skills",
+  "challenges": [
+    {
+      "slug": "write-letter",
+      "title": "Letter Writer",
+      "description": "Write a letter to a grandparent or relative. Address the envelope and mail it!",
+      "instructions": "1. Write your letter (draw pictures too!)\n2. Put it in an envelope\n3. Write the address on the front\n4. Put a stamp on it\n5. Mail it together!",
+      "icon": "✉️",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$4",
+      "time_estimate": "1 hour"
+    },
+    {
+      "slug": "make-breakfast",
+      "title": "Breakfast Chef",
+      "description": "Make breakfast for yourself (with a grown-up nearby for safety).",
+      "icon": "🍳",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "30 minutes"
+    },
+    {
+      "slug": "learn-phone-number",
+      "title": "Memory Master",
+      "description": "Memorize a parent's phone number. Recite it from memory!",
+      "icon": "📱",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "1 week"
+    },
+    {
+      "slug": "tie-shoes",
+      "title": "Lace Ace",
+      "description": "Learn to tie your shoes by yourself. Do it 3 times in a row!",
+      "icon": "👟",
+      "difficulty": "hard",
+      "reward_type": "money",
+      "reward_value": "$5",
+      "time_estimate": "1 week"
+    },
+    {
+      "slug": "set-table",
+      "title": "Table Setter",
+      "description": "Set the table for dinner every night for a week. All by yourself!",
+      "icon": "🍽️",
+      "difficulty": "easy",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "1 week"
+    },
+    {
+      "slug": "simple-recipe",
+      "title": "Recipe Reader",
+      "description": "Follow a simple recipe to make a snack. Read each step!",
+      "instructions": "Pick a simple recipe like:\n- Ants on a log (celery + peanut butter + raisins)\n- Fruit salad\n- Trail mix\n- Smoothie",
+      "icon": "📖",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "30 minutes"
+    },
+    {
+      "slug": "fold-laundry",
+      "title": "Fold Master",
+      "description": "Fold a whole basket of laundry. Make it neat!",
+      "icon": "👕",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "30 minutes"
+    },
+    {
+      "slug": "address-intro",
+      "title": "Address Expert",
+      "description": "Learn your full home address. Recite it from memory!",
+      "icon": "🏠",
+      "difficulty": "medium",
+      "reward_type": "money",
+      "reward_value": "$3",
+      "time_estimate": "1 week"
+    }
+  ]
+}
