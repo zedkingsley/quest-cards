@@ -9,7 +9,10 @@ interface ChallengeDetailProps {
   isActive?: boolean;
   isPendingReview?: boolean;
   isCompleted?: boolean;
-  onStart?: () => void;
+  isParent?: boolean;
+  hasActiveQuest?: boolean;
+  onStartForSelf?: () => void;
+  onAssignTo?: () => void;
   onMarkDone?: () => void;
   onApprove?: () => void;
   onReject?: () => void;
@@ -23,7 +26,10 @@ export function ChallengeDetail({
   isActive = false,
   isPendingReview = false,
   isCompleted = false,
-  onStart,
+  isParent = false,
+  hasActiveQuest = false,
+  onStartForSelf,
+  onAssignTo,
   onMarkDone,
   onApprove,
   onReject,
@@ -37,6 +43,8 @@ export function ChallengeDetail({
       default: return 'bg-stone-100 text-stone-600';
     }
   };
+
+  const canStart = !isActive && !isPendingReview && !isCompleted && !hasActiveQuest;
 
   return (
     <div className="space-y-6">
@@ -102,14 +110,33 @@ export function ChallengeDetail({
 
       {/* Action buttons */}
       <div className="space-y-3">
-        {/* Not started yet - parent can assign */}
-        {onStart && !isActive && !isPendingReview && !isCompleted && (
+        {/* Kid can start for themselves */}
+        {!isParent && canStart && onStartForSelf && (
           <button
-            onClick={onStart}
+            onClick={onStartForSelf}
             className="btn btn-primary w-full text-lg py-4"
           >
-            🚀 Start This Quest
+            🚀 Start This Quest!
           </button>
+        )}
+
+        {/* Parent can assign to a child */}
+        {isParent && canStart && onAssignTo && (
+          <button
+            onClick={onAssignTo}
+            className="btn btn-primary w-full text-lg py-4"
+          >
+            📋 Assign to...
+          </button>
+        )}
+
+        {/* Already have active quest warning */}
+        {canStart === false && hasActiveQuest && !isActive && !isPendingReview && !isCompleted && (
+          <div className="bg-stone-100 rounded-xl p-4 text-center">
+            <p className="text-stone-600">
+              {isParent ? 'This child already has' : 'You already have'} an active quest. Complete it first!
+            </p>
+          </div>
         )}
 
         {/* In progress - mark done */}
@@ -133,14 +160,14 @@ export function ChallengeDetail({
         )}
 
         {/* Pending review - approve/reject */}
-        {isPendingReview && (onApprove || onReject) && (
+        {isPendingReview && (
           <div className="space-y-3">
             <div className="bg-violet-50 rounded-xl p-4 text-center border border-violet-200">
               <p className="text-violet-600">
-                Waiting for parent approval...
+                {isParent ? 'Review this quest completion:' : 'Waiting for parent approval...'}
               </p>
             </div>
-            {onApprove && (
+            {isParent && onApprove && (
               <button
                 onClick={onApprove}
                 className="btn w-full text-lg py-4 bg-emerald-500 text-white hover:bg-emerald-600"
@@ -148,7 +175,7 @@ export function ChallengeDetail({
                 ✅ Approve
               </button>
             )}
-            {onReject && (
+            {isParent && onReject && (
               <button
                 onClick={onReject}
                 className="btn btn-outline w-full"

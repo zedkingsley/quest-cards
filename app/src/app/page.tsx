@@ -1,14 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { FamilyMember, Pack, Challenge, QuestWithDetails, Reward } from '@/lib/types';
+import { FamilyMember, Pack, Challenge, QuestWithDetails, MemberRole } from '@/lib/types';
 import { PACKS } from '@/lib/packs';
 import {
   getFamily,
-  createFamily,
   verifyPin,
   getMembers,
-  getMember,
   addMember,
   removeMember,
   getActiveQuest,
@@ -35,7 +33,6 @@ import {
   initializeDemoData,
 } from '@/lib/storage';
 import { Navigation, Tab } from '@/components/Navigation';
-import { MemberSelector } from '@/components/MemberSelector';
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { PackCard } from '@/components/PackCard';
 import { Modal } from '@/components/Modal';
@@ -47,6 +44,8 @@ import { IssueChallenge } from '@/components/IssueChallenge';
 import { RewardShop } from '@/components/RewardShop';
 import { ManageRewards } from '@/components/ManageRewards';
 import { PendingApprovals } from '@/components/PendingApprovals';
+import { MemberPickerModal } from '@/components/MemberPickerModal';
+import { ChildPickerModal } from '@/components/ChildPickerModal';
 
 export default function Home() {
   // Core state
@@ -56,6 +55,7 @@ export default function Home() {
   const [currentMemberId, setCurrentMemberId] = useState<string | null>(null);
   
   // Modal state
+  const [showMemberPicker, setShowMemberPicker] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [showPinPad, setShowPinPad] = useState(false);
   const [pinError, setPinError] = useState(false);
@@ -63,6 +63,8 @@ export default function Home() {
   const [selectedPack, setSelectedPack] = useState<Pack | null>(null);
   const [showIssueChallenge, setShowIssueChallenge] = useState(false);
   const [showManageRewards, setShowManageRewards] = useState(false);
+  const [showChildPicker, setShowChildPicker] = useState(false);
+  const [pendingAssignment, setPendingAssignment] = useState<{ pack: Pack; challenge: Challenge } | null>(null);
   const [selectedChallenge, setSelectedChallenge] = useState<{
     challenge: Challenge;
     pack: Pack;
@@ -80,7 +82,6 @@ export default function Home() {
   
   const activeQuest = currentMemberId ? getActiveQuest(currentMemberId) : null;
   const activeQuestDetails = activeQuest ? getQuestWithDetails(activeQuest) : null;
-  const completedQuests = currentMemberId ? getCompletedQuests(currentMemberId) : [];
   const memberStats = currentMemberId ? getMemberStats(currentMemberId) : null;
   
   // Parent-specific data
@@ -148,7 +149,7 @@ export default function Home() {
   };
 
   // Handlers
-  const handleAddMember = (name: string, avatar: string, role: 'parent' | 'child') => {
+  const handleAddMember = (name: string, avatar: string, role: MemberRole) => {
     const newMember = addMember(name, avatar, role);
     refreshState();
     if (!currentMemberId) {
@@ -168,23 +169,35 @@ export default function Home() {
     }
   };
 
-  const handleStartPackChallenge = () => {
-    if (!currentMemberId || !selectedChallenge || !isParent) return;
+  // Child starts quest for themselves
+  const handleStartForSelf = () => {
+    if (!currentMemberId || !selectedChallenge || isParent) return;
     
-    // For pack challenges, parent issues to the current view member
-    // If viewing self (parent), need to pick a child
-    const recipientId = currentMember?.role === 'child' 
-      ? currentMemberId 
-      : children[0]?.id;
-    
-    if (!recipientId) return;
+    // Find a parent to be the issuer (use first parent)
+    const issuer = parents[0];
+    if (!issuer) return;
     
     startPackQuest(
-      recipientId,
       currentMemberId,
+      issuer.id,
       selectedChallenge.pack.slug,
       selectedChallenge.challenge.slug
     );
+    setSelectedChallenge(null);
+    refreshState();
+  };
+
+  // Parent assigns quest to specific child
+  const handleAssignToChild = (childId: string) => {
+    if (!currentMemberId || !pendingAssignment || !isParent) return;
+    
+    startPackQuest(
+      childId,
+      currentMemberId,
+      pendingAssignment.pack.slug,
+      pendingAssignment.challenge.slug
+    );
+    setPendingAssignment(null);
     setSelectedChallenge(null);
     refreshState();
   };
@@ -301,12 +314,14 @@ export default function Home() {
           </h1>
           {currentMember && (
             <button 
-              onClick={() => setActiveTab('family')}
-              className="flex items-center gap-2 bg-white/20 rounded-full px-3 py-1 hover:bg-white/30 transition-all"
+              onClick={() => setShowMemberPicker(true)}
+              className="flex items-center gap-2 bg-white/20 rounded-full pl-1 pr-3 py-1 hover:bg-white/30 transition-all"
             >
-              <span className="text-xl">{currentMember.avatar}</span>
-              <span className="font-semibold">{currentMember.name}</span>
-              <span className="text-amber-200 text-sm">⭐{currentMember.pointsBalance}</span>
+              <span className="text-2xl">{currentMember.avatar}</span>
+              <div className="text-left">
+                <div className="font-semibold text-sm leading-tight">{currentMember.name}</div>
+                <div className="text-amber-200 text-xs">⭐{currentMember.pointsBalance}</div>
+              </div>
             </button>
           )}
         </div>
@@ -317,17 +332,6 @@ export default function Home() {
         {/* HOME TAB */}
         {activeTab === 'home' && (
           <div className="space-y-6">
-            {/* Member Selector */}
-            <section>
-              <h2 className="text-lg font-bold text-stone-700 mb-3">Who's playing?</h2>
-              <MemberSelector
-                members={members}
-                selectedId={currentMemberId}
-                onSelect={setCurrentMemberId}
-                onAddMember={() => setShowAddMember(true)}
-              />
-            </section>
-
             {currentMember && (
               <>
                 {/* Pending Approvals (for parents) */}
@@ -389,7 +393,7 @@ export default function Home() {
                     <div className="text-5xl mb-3">🗺️</div>
                     <h3 className="font-bold text-lg text-stone-700 mb-2">No active quest!</h3>
                     <p className="text-stone-500 mb-4">
-                      {isParent ? 'Issue a challenge or pick from packs.' : 'Ask a parent for a quest!'}
+                      {isParent ? 'Issue a challenge or browse packs to assign.' : 'Pick a quest from the Quests tab!'}
                     </p>
                     <button
                       onClick={() => setActiveTab('challenges')}
@@ -446,7 +450,7 @@ export default function Home() {
                 onClick={() => setShowIssueChallenge(true)}
                 className="w-full py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-98"
               >
-                🎯 Issue a Challenge
+                🎯 Issue Custom Challenge
               </button>
             )}
 
@@ -476,6 +480,7 @@ export default function Home() {
                       challenge={challenge}
                       packIcon={selectedPack.icon}
                       completed={currentMemberId ? hasCompletedChallenge(currentMemberId, selectedPack.slug, challenge.slug) : false}
+                      isActive={activeQuest?.packSlug === selectedPack.slug && activeQuest?.challengeSlug === challenge.slug}
                       onClick={() => openChallengeDetail(challenge, selectedPack)}
                     />
                   ))}
@@ -485,7 +490,9 @@ export default function Home() {
               // Show all packs
               <>
                 <h2 className="text-2xl font-bold text-stone-800">Quest Packs</h2>
-                <p className="text-stone-500">Choose a pack and pick your next adventure!</p>
+                <p className="text-stone-500">
+                  {isParent ? 'Browse packs to assign quests, or issue a custom challenge above.' : 'Pick a quest to start your adventure!'}
+                </p>
                 
                 <div className="space-y-4">
                   {PACKS.map((pack) => (
@@ -499,60 +506,6 @@ export default function Home() {
                 </div>
               </>
             )}
-          </div>
-        )}
-
-        {/* FAMILY TAB */}
-        {activeTab === 'family' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-stone-800">Family</h2>
-            
-            {/* Parents */}
-            {parents.length > 0 && (
-              <section>
-                <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
-                  Parents
-                </h3>
-                <div className="space-y-2">
-                  {parents.map((member) => (
-                    <FamilyMemberCard
-                      key={member.id}
-                      member={member}
-                      isSelected={currentMemberId === member.id}
-                      onSelect={() => setCurrentMemberId(member.id)}
-                      onRemove={() => handleRemoveMember(member.id)}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-            
-            {/* Children */}
-            {children.length > 0 && (
-              <section>
-                <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
-                  Children
-                </h3>
-                <div className="space-y-2">
-                  {children.map((member) => (
-                    <FamilyMemberCard
-                      key={member.id}
-                      member={member}
-                      isSelected={currentMemberId === member.id}
-                      onSelect={() => setCurrentMemberId(member.id)}
-                      onRemove={() => handleRemoveMember(member.id)}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <button
-              onClick={() => setShowAddMember(true)}
-              className="w-full py-4 rounded-2xl border-2 border-dashed border-stone-300 text-stone-500 hover:border-amber-400 hover:text-amber-600 transition-all font-semibold"
-            >
-              ➕ Add Family Member
-            </button>
           </div>
         )}
 
@@ -575,7 +528,7 @@ export default function Home() {
               // Parent view - manage rewards
               <div className="space-y-4">
                 <p className="text-stone-500">
-                  Manage your reward shop or switch to a child to see their shop view.
+                  Manage your reward shop. Switch to a child (tap your avatar) to see their shop view.
                 </p>
                 <div className="bg-violet-50 rounded-2xl p-4 border border-violet-200">
                   <p className="font-semibold text-violet-700 mb-2">Your Rewards</p>
@@ -609,8 +562,51 @@ export default function Home() {
               <h3 className="font-bold text-stone-700 mb-3">Family</h3>
               <p className="text-stone-600">{getFamily()?.name || 'My Family'}</p>
               <p className="text-sm text-stone-400 mt-1">
-                PIN: {getFamily()?.pin || '1234'} (tap to change)
+                PIN: {getFamily()?.pin || '1234'}
               </p>
+            </section>
+
+            {/* Manage Family Members */}
+            <section className="bg-white rounded-2xl p-4 border border-stone-100">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-stone-700">Family Members</h3>
+                <button
+                  onClick={() => setShowAddMember(true)}
+                  className="px-3 py-1.5 bg-amber-100 text-amber-700 text-sm font-semibold rounded-lg"
+                >
+                  + Add
+                </button>
+              </div>
+              
+              <div className="space-y-2">
+                {members.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-stone-50"
+                  >
+                    <span className="text-2xl">{member.avatar}</span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-stone-700">{member.name}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                          member.role === 'parent' 
+                            ? 'bg-violet-100 text-violet-700' 
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {member.role}
+                        </span>
+                      </div>
+                      <span className="text-sm text-amber-600">⭐ {member.pointsBalance}</span>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveMember(member.id)}
+                      className="p-2 text-red-400 hover:text-red-600"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))}
+              </div>
             </section>
 
             {/* Points Settings */}
@@ -650,6 +646,15 @@ export default function Home() {
         activeTab={activeTab} 
         onTabChange={setActiveTab}
         pendingCount={pendingApprovals.length + pendingRedemptions.length}
+      />
+
+      {/* Member Picker Modal */}
+      <MemberPickerModal
+        isOpen={showMemberPicker}
+        onClose={() => setShowMemberPicker(false)}
+        members={members}
+        currentMemberId={currentMemberId}
+        onSelect={setCurrentMemberId}
       />
 
       {/* Add Member Modal */}
@@ -698,6 +703,19 @@ export default function Home() {
         )}
       </Modal>
 
+      {/* Child Picker Modal (for parent quest assignment) */}
+      <ChildPickerModal
+        isOpen={showChildPicker}
+        onClose={() => {
+          setShowChildPicker(false);
+          setPendingAssignment(null);
+        }}
+        children={children}
+        title="Assign Quest To"
+        subtitle={pendingAssignment ? `"${pendingAssignment.challenge.title}" for ${pendingAssignment.challenge.reward} pts` : undefined}
+        onSelect={handleAssignToChild}
+      />
+
       {/* Manage Rewards Modal */}
       <Modal
         isOpen={showManageRewards}
@@ -735,7 +753,13 @@ export default function Home() {
             isActive={selectedChallenge.isActive}
             isPendingReview={selectedChallenge.isPending}
             isCompleted={selectedChallenge.isCompleted}
-            onStart={isParent && !activeQuest && !selectedChallenge.isCompleted ? handleStartPackChallenge : undefined}
+            isParent={isParent}
+            hasActiveQuest={!!activeQuest}
+            onStartForSelf={!isParent ? handleStartForSelf : undefined}
+            onAssignTo={isParent ? () => {
+              setPendingAssignment({ pack: selectedChallenge.pack, challenge: selectedChallenge.challenge });
+              setShowChildPicker(true);
+            } : undefined}
             onMarkDone={selectedChallenge.isActive ? handleMarkDone : undefined}
             onApprove={selectedChallenge.isPending && isParent ? () => handleApprove(selectedChallenge.questId!) : undefined}
             onReject={selectedChallenge.isPending && isParent ? () => handleReject(selectedChallenge.questId!) : undefined}
@@ -743,56 +767,6 @@ export default function Home() {
           />
         )}
       </Modal>
-    </div>
-  );
-}
-
-// Sub-component for family member cards
-function FamilyMemberCard({ 
-  member, 
-  isSelected, 
-  onSelect, 
-  onRemove 
-}: { 
-  member: FamilyMember;
-  isSelected: boolean;
-  onSelect: () => void;
-  onRemove: () => void;
-}) {
-  const stats = getMemberStats(member.id);
-  
-  return (
-    <div
-      className={`flex items-center gap-3 p-4 rounded-2xl transition-all ${
-        isSelected
-          ? 'bg-amber-100 border-2 border-amber-400'
-          : 'bg-white border-2 border-stone-100 hover:border-stone-200'
-      }`}
-    >
-      <button onClick={onSelect} className="flex items-center gap-3 flex-1 text-left">
-        <span className="text-3xl">{member.avatar}</span>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-stone-800">{member.name}</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full ${
-              member.role === 'parent' 
-                ? 'bg-violet-100 text-violet-700' 
-                : 'bg-amber-100 text-amber-700'
-            }`}>
-              {member.role}
-            </span>
-          </div>
-          <div className="text-sm text-stone-500">
-            ⭐ {member.pointsBalance} pts • {stats.completedCount} quests done
-          </div>
-        </div>
-      </button>
-      <button
-        onClick={onRemove}
-        className="p-2 text-red-400 hover:text-red-600 tap-target"
-      >
-        🗑️
-      </button>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-export type Tab = 'home' | 'challenges' | 'family' | 'shop' | 'settings';
+export type Tab = 'home' | 'challenges' | 'shop' | 'settings';
 
 interface NavigationProps {
   activeTab: Tab;
@@ -11,8 +11,7 @@ interface NavigationProps {
 export function Navigation({ activeTab, onTabChange, pendingCount = 0 }: NavigationProps) {
   const tabs: { id: Tab; icon: string; label: string }[] = [
     { id: 'home', icon: '🏠', label: 'Home' },
-    { id: 'challenges', icon: '🎯', label: 'Challenges' },
-    { id: 'family', icon: '👨‍👩‍👧‍👦', label: 'Family' },
+    { id: 'challenges', icon: '🎯', label: 'Quests' },
     { id: 'shop', icon: '🎁', label: 'Shop' },
     { id: 'settings', icon: '⚙️', label: 'Settings' },
   ];
@@ -24,14 +23,14 @@ export function Navigation({ activeTab, onTabChange, pendingCount = 0 }: Navigat
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
-            className={`relative flex flex-col items-center py-2 px-3 rounded-xl transition-all tap-target ${
+            className={`relative flex flex-col items-center py-2 px-4 rounded-xl transition-all tap-target ${
               activeTab === tab.id
                 ? 'text-amber-600'
                 : 'text-stone-400 hover:text-stone-600'
             }`}
           >
-            <span className="text-xl mb-0.5">{tab.icon}</span>
-            <span className={`text-[10px] font-medium ${
+            <span className="text-2xl mb-0.5">{tab.icon}</span>
+            <span className={`text-xs font-medium ${
               activeTab === tab.id ? 'text-amber-600' : ''
             }`}>
               {tab.label}
