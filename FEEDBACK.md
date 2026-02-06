@@ -2,6 +2,20 @@
 
 ---
 
+## Round 4 — 2026-02-05 ✅
+
+### F13: Quick "Add Quest" FAB ✅
+**Issue:** No quick way to browse/add more quests when you already have an active one
+**Solution:** Floating amber "+" button in bottom-right (above nav) → goes to Quests tab
+**Status:** ✅ Done
+
+### F14: Queued quests clickable ✅
+**Issue:** Can't tap queued quests to see details
+**Solution:** Queued items are now buttons → opens challenge detail modal with isQueued state
+**Status:** ✅ Done
+
+---
+
 ## Round 3 — 2026-02-05 ✅
 
 ### F11: Parents Can't Start Quests for Themselves ✅

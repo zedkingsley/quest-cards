@@ -510,7 +510,7 @@ export default function Home() {
                   </section>
                 )}
 
-                {/* F8: Queued Quests */}
+                {/* F8: Queued Quests (F14: clickable) */}
                 {queuedQuestsDetails.length > 0 && (
                   <section>
                     <h2 className="text-lg font-bold text-stone-700 mb-3">
@@ -518,9 +518,38 @@ export default function Home() {
                     </h2>
                     <div className="space-y-2">
                       {queuedQuestsDetails.map((quest) => (
-                        <div
+                        <button
                           key={quest.id}
-                          className="flex items-center gap-3 bg-white rounded-xl p-3 border border-stone-100"
+                          onClick={() => {
+                            const pack = quest.pack || {
+                              slug: 'custom',
+                              name: 'Custom Challenge',
+                              icon: '⭐',
+                              description: '',
+                              category: 'custom' as const,
+                              challenges: [],
+                              isBuiltIn: false,
+                            };
+                            const challenge: Challenge = {
+                              slug: quest.id,
+                              title: quest.challenge.title,
+                              description: quest.challenge.description,
+                              icon: quest.challenge.icon,
+                              difficulty: 'slug' in quest.challenge ? quest.challenge.difficulty : 'medium',
+                              reward: quest.reward,
+                              time_estimate: 'slug' in quest.challenge ? quest.challenge.time_estimate : '',
+                            };
+                            setSelectedChallenge({
+                              challenge,
+                              pack,
+                              isActive: false,
+                              isPending: false,
+                              isCompleted: false,
+                              isQueued: true,
+                              questId: quest.id,
+                            });
+                          }}
+                          className="w-full flex items-center gap-3 bg-white rounded-xl p-3 border border-stone-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors text-left"
                         >
                           <span className="text-2xl">{quest.challenge.icon}</span>
                           <div className="flex-1">
@@ -528,7 +557,8 @@ export default function Home() {
                             <p className="text-xs text-stone-400">{quest.pack?.name || 'Custom'}</p>
                           </div>
                           <span className="text-amber-500 font-bold text-sm">{quest.reward} ⭐</span>
-                        </div>
+                          <span className="text-stone-300">→</span>
+                        </button>
                       ))}
                     </div>
                   </section>
@@ -771,6 +801,17 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* F13: Floating Action Button - Add Quest (shows on home when has active quest) */}
+      {activeTab === 'home' && activeQuest && (
+        <button
+          onClick={() => setActiveTab('challenges')}
+          className="fixed bottom-24 right-4 w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-500 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center text-2xl z-20"
+          aria-label="Add more quests"
+        >
+          +
+        </button>
+      )}
 
       {/* Navigation */}
       <Navigation 
