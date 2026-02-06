@@ -371,25 +371,22 @@ export default function Home() {
             
             {/* Profile Button */}
             {currentMember && (
-              <button 
-                onClick={() => setShowMemberPicker(true)}
-                className="flex items-center gap-2 bg-white/20 rounded-full pl-1 pr-3 py-1 hover:bg-white/30 transition-all"
-              >
-                <span className="text-2xl">{currentMember.avatar}</span>
-                <div className="text-left">
-                  <div className="font-semibold text-sm leading-tight">{currentMember.name}</div>
-                  {/* F10: Points → Shop */}
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveTab('shop');
-                    }}
-                    className="text-amber-200 text-xs hover:text-white transition-colors"
-                  >
-                    ⭐{currentMember.pointsBalance}
-                  </button>
-                </div>
-              </button>
+              <div className="flex items-center gap-2 bg-white/20 rounded-full pl-1 pr-3 py-1">
+                <button
+                  onClick={() => setShowMemberPicker(true)}
+                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                >
+                  <span className="text-2xl">{currentMember.avatar}</span>
+                  <span className="font-semibold text-sm">{currentMember.name}</span>
+                </button>
+                {/* F10: Points → Shop */}
+                <button 
+                  onClick={() => setActiveTab('shop')}
+                  className="text-amber-200 text-xs hover:text-white transition-colors ml-1"
+                >
+                  ⭐{currentMember.pointsBalance}
+                </button>
+              </div>
             )}
           </div>
         </div>
