@@ -2,6 +2,20 @@
 
 ---
 
+## Round 5 — 2026-02-05 ✅
+
+### F15: Notification Center (Option C) ✅
+**Issue:** Parent tasks (approvals, fulfillments) cluttered Home tab
+**Solution:** 
+- 🔔 bell icon in header (parents only) with red badge count
+- Slides in from right with all pending tasks
+- Home now shows a summary card that opens drawer
+- Drawer has approve/reject/fulfill actions inline
+- Animated slide-in, backdrop click to close
+**Status:** ✅ Done
+
+---
+
 ## Round 4 — 2026-02-05 ✅
 
 ### F13: Quick "Add Quest" FAB ✅

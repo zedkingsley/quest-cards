@@ -44,10 +44,10 @@ import { PinPad } from '@/components/PinPad';
 import { IssueChallenge } from '@/components/IssueChallenge';
 import { RewardShop } from '@/components/RewardShop';
 import { ManageRewards } from '@/components/ManageRewards';
-import { PendingApprovals } from '@/components/PendingApprovals';
 import { MemberPickerModal } from '@/components/MemberPickerModal';
 import { ChildPickerModal } from '@/components/ChildPickerModal';
 import { ApprovalHandoff } from '@/components/ApprovalHandoff';
+import { NotificationDrawer } from '@/components/NotificationDrawer';
 
 export default function Home() {
   // Core state
@@ -67,6 +67,7 @@ export default function Home() {
   const [showManageRewards, setShowManageRewards] = useState(false);
   const [showChildPicker, setShowChildPicker] = useState(false);
   const [showApprovalHandoff, setShowApprovalHandoff] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [pendingHandoffQuest, setPendingHandoffQuest] = useState<Quest | null>(null);
   const [pendingAssignment, setPendingAssignment] = useState<{ pack: Pack; challenge: Challenge } | null>(null);
   const [selectedChallenge, setSelectedChallenge] = useState<{
@@ -351,27 +352,46 @@ export default function Home() {
           >
             <span>⭐</span> Quest Cards
           </button>
-          {currentMember && (
-            <button 
-              onClick={() => setShowMemberPicker(true)}
-              className="flex items-center gap-2 bg-white/20 rounded-full pl-1 pr-3 py-1 hover:bg-white/30 transition-all"
-            >
-              <span className="text-2xl">{currentMember.avatar}</span>
-              <div className="text-left">
-                <div className="font-semibold text-sm leading-tight">{currentMember.name}</div>
-                {/* F10: Points → Shop */}
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveTab('shop');
-                  }}
-                  className="text-amber-200 text-xs hover:text-white transition-colors"
-                >
-                  ⭐{currentMember.pointsBalance}
-                </button>
-              </div>
-            </button>
-          )}
+          
+          <div className="flex items-center gap-2">
+            {/* Notification Bell (parents only) */}
+            {isParent && (
+              <button
+                onClick={() => setShowNotifications(true)}
+                className="relative w-10 h-10 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-all"
+              >
+                <span className="text-xl">🔔</span>
+                {(pendingApprovals.length + pendingRedemptions.length) > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
+                    {pendingApprovals.length + pendingRedemptions.length}
+                  </span>
+                )}
+              </button>
+            )}
+            
+            {/* Profile Button */}
+            {currentMember && (
+              <button 
+                onClick={() => setShowMemberPicker(true)}
+                className="flex items-center gap-2 bg-white/20 rounded-full pl-1 pr-3 py-1 hover:bg-white/30 transition-all"
+              >
+                <span className="text-2xl">{currentMember.avatar}</span>
+                <div className="text-left">
+                  <div className="font-semibold text-sm leading-tight">{currentMember.name}</div>
+                  {/* F10: Points → Shop */}
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveTab('shop');
+                    }}
+                    className="text-amber-200 text-xs hover:text-white transition-colors"
+                  >
+                    ⭐{currentMember.pointsBalance}
+                  </button>
+                </div>
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -382,41 +402,27 @@ export default function Home() {
           <div className="space-y-6">
             {currentMember && (
               <>
-                {/* Pending Approvals (for parents) */}
-                {isParent && pendingApprovals.length > 0 && (
-                  <PendingApprovals
-                    quests={pendingApprovals}
-                    onApprove={handleApprove}
-                    onReject={handleReject}
-                  />
-                )}
-
-                {/* Pending Redemptions (for parents) */}
-                {isParent && pendingRedemptions.length > 0 && (
-                  <section>
-                    <h2 className="text-lg font-bold text-stone-700 mb-3">
-                      Rewards to Fulfill
-                    </h2>
-                    <div className="space-y-2">
-                      {pendingRedemptions.map((r) => (
-                        <div key={r.id} className="flex items-center gap-3 bg-violet-50 rounded-xl p-4 border border-violet-200">
-                          <span className="text-2xl">{r.reward.icon}</span>
-                          <div className="flex-1">
-                            <p className="font-semibold text-stone-700">{r.reward.name}</p>
-                            <p className="text-sm text-stone-500">
-                              {r.claimer.avatar} {r.claimer.name} redeemed {r.pointsSpent} pts
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => handleFulfillRedemption(r.id)}
-                            className="px-3 py-2 bg-violet-500 text-white text-sm font-semibold rounded-lg"
-                          >
-                            ✓ Done
-                          </button>
-                        </div>
-                      ))}
+                {/* Parent notification hint (when there are pending tasks) */}
+                {isParent && (pendingApprovals.length + pendingRedemptions.length) > 0 && (
+                  <button
+                    onClick={() => setShowNotifications(true)}
+                    className="w-full p-4 bg-gradient-to-r from-violet-50 to-purple-50 rounded-2xl border-2 border-violet-200 hover:border-violet-300 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🔔</span>
+                      <div className="flex-1">
+                        <p className="font-bold text-violet-700">
+                          {pendingApprovals.length + pendingRedemptions.length} family task{(pendingApprovals.length + pendingRedemptions.length) !== 1 ? 's' : ''} waiting
+                        </p>
+                        <p className="text-sm text-violet-500">
+                          {pendingApprovals.length > 0 && `${pendingApprovals.length} quest${pendingApprovals.length !== 1 ? 's' : ''} to approve`}
+                          {pendingApprovals.length > 0 && pendingRedemptions.length > 0 && ' • '}
+                          {pendingRedemptions.length > 0 && `${pendingRedemptions.length} reward${pendingRedemptions.length !== 1 ? 's' : ''} to fulfill`}
+                        </p>
+                      </div>
+                      <span className="text-violet-400">→</span>
                     </div>
-                  </section>
+                  </button>
                 )}
 
                 {/* F8: Current Quest - Expanded */}
@@ -817,7 +823,18 @@ export default function Home() {
       <Navigation 
         activeTab={activeTab} 
         onTabChange={setActiveTab}
-        pendingCount={pendingApprovals.length + pendingRedemptions.length}
+        pendingCount={0}
+      />
+
+      {/* Notification Drawer (parents only) */}
+      <NotificationDrawer
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        pendingApprovals={pendingApprovals}
+        pendingRedemptions={pendingRedemptions}
+        onApproveQuest={handleApprove}
+        onRejectQuest={handleReject}
+        onFulfillReward={handleFulfillRedemption}
       />
 
       {/* Member Picker Modal (F7: switches and goes home) */}
