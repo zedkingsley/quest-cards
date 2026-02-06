@@ -19,6 +19,7 @@ import {
   approveQuest,
   rejectQuest,
   abandonQuest,
+  unsubmitQuest,
   hasCompletedChallenge,
   getQuestWithDetails,
   getPendingApprovals,
@@ -105,8 +106,8 @@ export default function Home() {
     ? getRewardsOwnedBy(currentMemberId)
     : [];
   
-  // Child-specific data
-  const availableRewards = !isParent && currentMemberId
+  // Rewards available to current member (F20: now includes parents)
+  const availableRewards = currentMemberId
     ? getRewardsAvailableTo(currentMemberId)
     : [];
 
@@ -232,9 +233,19 @@ export default function Home() {
     refreshState();
   };
 
-  // Kid marks quest done (F9: shows handoff modal)
+  // Mark quest done (F9: shows handoff modal for kids, F19: auto-complete for parent self-assigned)
   const handleMarkDone = () => {
-    if (!activeQuest) return;
+    if (!activeQuest || !currentMemberId) return;
+    
+    // F19: Parent completing their own self-assigned quest → auto-complete
+    if (isParent && activeQuest.issuerId === currentMemberId && activeQuest.recipientId === currentMemberId) {
+      submitQuest(activeQuest.id);
+      approveQuest(activeQuest.id);
+      refreshState();
+      setSelectedChallenge(null);
+      return;
+    }
+    
     submitQuest(activeQuest.id);
     refreshState();
     
@@ -243,6 +254,14 @@ export default function Home() {
       setPendingHandoffQuest(activeQuest);
       setShowApprovalHandoff(true);
     }
+    setSelectedChallenge(null);
+  };
+  
+  // F14: Undo submission — go back to active
+  const handleUndoSubmit = () => {
+    if (!activeQuest) return;
+    unsubmitQuest(activeQuest.id);
+    refreshState();
     setSelectedChallenge(null);
   };
 
@@ -257,11 +276,19 @@ export default function Home() {
     return true;
   };
 
+  // F17: Parents don't need PIN when already logged in as parent
   const handleApprove = (questId: string) => {
-    requirePin(() => {
+    if (isParent) {
+      // Parent already authenticated by being in parent view
       approveQuest(questId);
       refreshState();
-    });
+      setSelectedChallenge(null);
+    } else {
+      requirePin(() => {
+        approveQuest(questId);
+        refreshState();
+      });
+    }
   };
 
   const handleReject = (questId: string) => {
@@ -271,7 +298,7 @@ export default function Home() {
 
   const handleAbandon = () => {
     if (!activeQuest) return;
-    if (confirm('Give up on this quest?')) {
+    if (confirm('Pass on this quest?')) {
       abandonQuest(activeQuest.id);
       setSelectedChallenge(null);
       refreshState();
@@ -286,11 +313,17 @@ export default function Home() {
     }
   };
 
+  // F17: Parents don't need PIN when already logged in as parent
   const handleFulfillRedemption = (redemptionId: string) => {
-    requirePin(() => {
+    if (isParent) {
       fulfillRedemption(redemptionId);
       refreshState();
-    });
+    } else {
+      requirePin(() => {
+        fulfillRedemption(redemptionId);
+        refreshState();
+      });
+    }
   };
 
   const handleAddReward = (name: string, pointCost: number, icon: string, description?: string, availableTo?: string[]) => {
@@ -379,13 +412,10 @@ export default function Home() {
                   <span className="text-2xl">{currentMember.avatar}</span>
                   <span className="font-semibold text-sm">{currentMember.name}</span>
                 </button>
-                {/* F10: Points → Shop */}
-                <button 
-                  onClick={() => setActiveTab('shop')}
-                  className="text-amber-200 text-xs hover:text-white transition-colors ml-1"
-                >
+                {/* Points display (F18: removed click-to-shop to avoid accidental taps) */}
+                <span className="text-amber-200 text-xs ml-1">
                   ⭐{currentMember.pointsBalance}
-                </button>
+                </span>
               </div>
             )}
           </div>
@@ -695,28 +725,25 @@ export default function Home() {
               )}
             </div>
             
-            {isParent ? (
-              <div className="space-y-4">
-                <p className="text-stone-500">
-                  Manage your reward shop. Switch to a child (tap your avatar) to see their shop view.
-                </p>
-                <div className="bg-violet-50 rounded-2xl p-4 border border-violet-200">
-                  <p className="font-semibold text-violet-700 mb-2">Your Rewards</p>
-                  <p className="text-violet-600">{myRewards.filter(r => r.active).length} active rewards</p>
-                  <button
-                    onClick={() => setShowManageRewards(true)}
-                    className="mt-3 btn btn-primary w-full"
-                  >
-                    Edit My Rewards
-                  </button>
-                </div>
+            {/* F20: Show shop view for everyone (parents can now receive rewards too) */}
+            <RewardShop
+              viewer={currentMember}
+              rewardGroups={availableRewards}
+              onRedeem={handleRedeemReward}
+            />
+            
+            {/* Manage section for parents */}
+            {isParent && (
+              <div className="mt-6 bg-violet-50 rounded-2xl p-4 border border-violet-200">
+                <p className="font-semibold text-violet-700 mb-2">Your Reward Shop</p>
+                <p className="text-violet-600 text-sm mb-3">{myRewards.filter(r => r.active).length} active rewards you offer</p>
+                <button
+                  onClick={() => setShowManageRewards(true)}
+                  className="btn btn-primary w-full"
+                >
+                  ⚙️ Manage My Rewards
+                </button>
               </div>
-            ) : (
-              <RewardShop
-                viewer={currentMember}
-                rewardGroups={availableRewards}
-                onRedeem={handleRedeemReward}
-              />
             )}
           </div>
         )}
@@ -889,6 +916,15 @@ export default function Home() {
               pendingHandoffQuest.customChallenge?.title || 
               'Quest'
             }
+            questDescription={
+              activeQuestDetails?.challenge?.description ||
+              pendingHandoffQuest.customChallenge?.description
+            }
+            questIcon={
+              activeQuestDetails?.challenge?.icon ||
+              pendingHandoffQuest.customChallenge?.icon
+            }
+            questReward={pendingHandoffQuest.reward}
             onApproveNow={handleHandoffApprove}
             onLater={() => {
               setShowApprovalHandoff(false);
@@ -977,6 +1013,7 @@ export default function Home() {
             onApprove={selectedChallenge.isPending && isParent ? () => handleApprove(selectedChallenge.questId!) : undefined}
             onReject={selectedChallenge.isPending && isParent ? () => handleReject(selectedChallenge.questId!) : undefined}
             onAbandon={selectedChallenge.isActive ? handleAbandon : undefined}
+            onUndoSubmit={selectedChallenge.isPending && !isParent ? handleUndoSubmit : undefined}
           />
         )}
       </Modal>

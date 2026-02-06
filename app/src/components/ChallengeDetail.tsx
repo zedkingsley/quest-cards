@@ -18,6 +18,7 @@ interface ChallengeDetailProps {
   onApprove?: () => void;
   onReject?: () => void;
   onAbandon?: () => void;
+  onUndoSubmit?: () => void;
   hasChildren?: boolean; // whether there are children to assign to
 }
 
@@ -37,6 +38,7 @@ export function ChallengeDetail({
   onApprove,
   onReject,
   onAbandon,
+  onUndoSubmit,
   hasChildren = true,
 }: ChallengeDetailProps) {
   const getDifficultyColor = (difficulty: string) => {
@@ -177,13 +179,13 @@ export function ChallengeDetail({
                 onClick={onAbandon}
                 className="btn btn-outline w-full text-stone-500"
               >
-                Give Up
+                Pass
               </button>
             )}
           </>
         )}
 
-        {/* Pending review - approve/reject */}
+        {/* Pending review - approve/reject for parents, undo for kids */}
         {isPendingReview && (
           <div className="space-y-3">
             <div className="bg-violet-50 rounded-xl p-4 text-center border border-violet-200">
@@ -196,7 +198,7 @@ export function ChallengeDetail({
                 onClick={onApprove}
                 className="btn w-full text-lg py-4 bg-emerald-500 text-white hover:bg-emerald-600"
               >
-                ✅ Approve
+                🔐 Approve with PIN
               </button>
             )}
             {isParent && onReject && (
@@ -205,6 +207,14 @@ export function ChallengeDetail({
                 className="btn btn-outline w-full"
               >
                 ↩️ Try Again
+              </button>
+            )}
+            {!isParent && onUndoSubmit && (
+              <button
+                onClick={onUndoSubmit}
+                className="btn btn-outline w-full text-stone-500"
+              >
+                ↩️ Undo — I'm not done yet
               </button>
             )}
           </div>

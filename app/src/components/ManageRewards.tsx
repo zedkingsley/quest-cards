@@ -34,7 +34,8 @@ export function ManageRewards({
   const [newDescription, setNewDescription] = useState('');
   const [newAvailableTo, setNewAvailableTo] = useState<string[]>([]);
 
-  const children = familyMembers.filter(m => m.role === 'child');
+  // F20: Allow targeting any family member (not just children)
+  const otherMembers = familyMembers.filter(m => m.id !== owner.id);
 
   const handleAdd = () => {
     if (newName.trim()) {
@@ -69,6 +70,7 @@ export function ManageRewards({
   // Group rewards by availability
   const everyoneRewards = rewards.filter(r => r.availableTo.length === 0);
   const specificRewards = rewards.filter(r => r.availableTo.length > 0);
+  const children = familyMembers.filter(m => m.role === 'child');
 
   return (
     <div className="space-y-6">
@@ -105,18 +107,18 @@ export function ManageRewards({
         </div>
       </section>
 
-      {/* Per-child sections */}
-      {children.map((child) => {
-        const childRewards = specificRewards.filter(r => r.availableTo.includes(child.id));
-        if (childRewards.length === 0) return null;
+      {/* Per-member sections (F20: includes parents) */}
+      {otherMembers.map((member) => {
+        const memberRewards = specificRewards.filter(r => r.availableTo.includes(member.id));
+        if (memberRewards.length === 0) return null;
         
         return (
-          <section key={child.id}>
+          <section key={member.id}>
             <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
-              For {child.avatar} {child.name}
+              For {member.avatar} {member.name}
             </h3>
             <div className="space-y-2">
-              {childRewards.map((reward) => (
+              {memberRewards.map((reward) => (
                 <RewardRow
                   key={reward.id}
                   reward={reward}
@@ -197,18 +199,19 @@ export function ManageRewards({
               >
                 Everyone
               </button>
-              {children.map((child) => (
+              {/* F20: Show all family members (not just children) */}
+              {otherMembers.map((member) => (
                 <button
-                  key={child.id}
+                  key={member.id}
                   type="button"
-                  onClick={() => toggleAvailability(child.id)}
+                  onClick={() => toggleAvailability(member.id)}
                   className={`px-3 py-1.5 rounded-lg text-sm transition-all ${
-                    newAvailableTo.includes(child.id)
+                    newAvailableTo.includes(member.id)
                       ? 'bg-amber-500 text-white'
                       : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
                   }`}
                 >
-                  {child.avatar} {child.name}
+                  {member.avatar} {member.name}
                 </button>
               ))}
             </div>

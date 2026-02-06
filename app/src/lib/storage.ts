@@ -380,6 +380,18 @@ export function abandonQuest(questId: string): Quest | undefined {
   return quests[index];
 }
 
+// Undo a submission (F14: kid can take back "I did it")
+export function unsubmitQuest(questId: string): Quest | undefined {
+  const quests = getQuests();
+  const index = quests.findIndex(q => q.id === questId);
+  if (index === -1) return undefined;
+  
+  quests[index].status = 'active';
+  quests[index].submittedAt = undefined;
+  setItem(STORAGE_KEYS.QUESTS, quests);
+  return quests[index];
+}
+
 export function hasCompletedChallenge(memberId: string, packSlug: string, challengeSlug: string): boolean {
   const quests = getQuestsForMember(memberId);
   return quests.some(
@@ -401,15 +413,21 @@ export function getRewardsOwnedBy(memberId: string): Reward[] {
 
 export function getRewardsAvailableTo(memberId: string): { owner: FamilyMember; rewards: Reward[] }[] {
   const rewards = getRewards().filter(r => r.active);
-  const parents = getParents();
+  const allMembers = getMembers();
+  const member = getMember(memberId);
   
-  return parents.map(parent => ({
-    owner: parent,
-    rewards: rewards.filter(r => 
-      r.ownerId === parent.id && 
-      (r.availableTo.length === 0 || r.availableTo.includes(memberId))
-    ),
-  })).filter(group => group.rewards.length > 0);
+  // Get all reward owners who have rewards available to this member
+  // (excluding yourself - you can't redeem your own rewards)
+  return allMembers
+    .filter(m => m.id !== memberId) // Exclude self
+    .map(owner => ({
+      owner,
+      rewards: rewards.filter(r => 
+        r.ownerId === owner.id && 
+        (r.availableTo.length === 0 || r.availableTo.includes(memberId))
+      ),
+    }))
+    .filter(group => group.rewards.length > 0);
 }
 
 export function addReward(

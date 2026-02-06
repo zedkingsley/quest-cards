@@ -6,13 +6,19 @@ import { PinPad } from './PinPad';
 interface ApprovalHandoffProps {
   childName: string;
   questTitle: string;
+  questDescription?: string;
+  questIcon?: string;
+  questReward?: number;
   onApproveNow: (pin: string) => boolean; // returns true if PIN correct
   onLater: () => void;
 }
 
 export function ApprovalHandoff({ 
   childName, 
-  questTitle, 
+  questTitle,
+  questDescription,
+  questIcon,
+  questReward,
   onApproveNow, 
   onLater 
 }: ApprovalHandoffProps) {
@@ -59,7 +65,18 @@ export function ApprovalHandoff({
       </p>
       
       <div className="bg-amber-50 rounded-2xl p-4 mb-6 border border-amber-200">
-        <p className="text-amber-800 font-semibold">{questTitle}</p>
+        <div className="flex items-start gap-3">
+          {questIcon && <span className="text-3xl">{questIcon}</span>}
+          <div className="flex-1 text-left">
+            <p className="text-amber-800 font-bold">{questTitle}</p>
+            {questDescription && (
+              <p className="text-amber-700 text-sm mt-1">{questDescription}</p>
+            )}
+            {questReward && (
+              <p className="text-amber-600 text-sm mt-2 font-semibold">🎁 {questReward} points</p>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -73,7 +90,7 @@ export function ApprovalHandoff({
           onClick={onLater}
           className="btn btn-outline w-full"
         >
-          I'll approve later
+          Skip
         </button>
       </div>
       
