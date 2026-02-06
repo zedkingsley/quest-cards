@@ -1,6 +1,6 @@
 'use client';
 
-import { Challenge, ChallengeWithDetails } from '@/lib/types';
+import { Challenge } from '@/lib/types';
 
 interface ChallengeDetailProps {
   challenge: Challenge;
@@ -9,7 +9,6 @@ interface ChallengeDetailProps {
   isActive?: boolean;
   isPendingReview?: boolean;
   isCompleted?: boolean;
-  customReward?: string;
   onStart?: () => void;
   onMarkDone?: () => void;
   onApprove?: () => void;
@@ -21,117 +20,152 @@ export function ChallengeDetail({
   challenge,
   packName,
   packIcon,
-  isActive,
-  isPendingReview,
-  isCompleted,
-  customReward,
+  isActive = false,
+  isPendingReview = false,
+  isCompleted = false,
   onStart,
   onMarkDone,
   onApprove,
   onReject,
   onAbandon,
 }: ChallengeDetailProps) {
-  const difficultyClass = {
-    easy: 'badge-easy',
-    medium: 'badge-medium',
-    hard: 'badge-hard',
-  }[challenge.difficulty];
-
-  const reward = customReward || challenge.reward_value;
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'easy': return 'bg-emerald-100 text-emerald-700';
+      case 'medium': return 'bg-amber-100 text-amber-700';
+      case 'hard': return 'bg-red-100 text-red-700';
+      default: return 'bg-stone-100 text-stone-600';
+    }
+  };
 
   return (
-    <div className="text-center">
-      {/* Icon */}
-      <div className="emoji-icon-lg mb-4 animate-pop-in">{challenge.icon}</div>
-      
-      {/* Title */}
-      <h3 className="text-2xl font-bold text-stone-800 mb-2">{challenge.title}</h3>
-      
-      {/* Pack info */}
-      <p className="text-stone-500 text-sm mb-4">
-        {packIcon} {packName}
-      </p>
-      
-      {/* Badges */}
-      <div className="flex items-center justify-center gap-2 mb-6">
-        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${difficultyClass}`}>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="text-center">
+        <div className="emoji-icon-xl mx-auto mb-4">{challenge.icon}</div>
+        <h2 className="text-2xl font-bold text-stone-800 mb-2">{challenge.title}</h2>
+        <p className="text-stone-500">
+          {packIcon} {packName}
+        </p>
+      </div>
+
+      {/* Status badges */}
+      <div className="flex justify-center gap-2 flex-wrap">
+        <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getDifficultyColor(challenge.difficulty)}`}>
           {challenge.difficulty}
         </span>
-        <span className="px-3 py-1 rounded-full text-sm font-semibold bg-stone-100 text-stone-600">
-          ⏱ {challenge.time_estimate}
-        </span>
-      </div>
-      
-      {/* Description */}
-      <div className="text-left bg-stone-50 rounded-2xl p-4 mb-6">
-        <p className="text-stone-700 leading-relaxed">{challenge.description}</p>
-        
-        {challenge.instructions && (
-          <div className="mt-4 pt-4 border-t border-stone-200">
-            <p className="font-semibold text-stone-600 mb-2">📋 How to do it:</p>
-            <p className="text-stone-600 whitespace-pre-line text-sm">{challenge.instructions}</p>
-          </div>
+        {challenge.time_estimate && (
+          <span className="px-3 py-1 rounded-full text-sm font-semibold bg-stone-100 text-stone-600">
+            ⏱️ {challenge.time_estimate}
+          </span>
+        )}
+        {isCompleted && (
+          <span className="px-3 py-1 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-700">
+            ✓ Completed
+          </span>
+        )}
+        {isPendingReview && (
+          <span className="px-3 py-1 rounded-full text-sm font-semibold bg-violet-100 text-violet-700">
+            ⏳ Pending Review
+          </span>
+        )}
+        {isActive && (
+          <span className="px-3 py-1 rounded-full text-sm font-semibold bg-amber-100 text-amber-700">
+            🎯 In Progress
+          </span>
         )}
       </div>
-      
-      {/* Reward */}
-      <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-2xl p-4 mb-6 border-2 border-amber-200">
-        <p className="text-amber-600 font-semibold mb-1">🎁 Reward</p>
-        <p className="text-2xl font-bold text-amber-700">{reward}</p>
+
+      {/* Description */}
+      <div className="bg-stone-50 rounded-2xl p-4">
+        <h3 className="font-semibold text-stone-700 mb-2">The Quest</h3>
+        <p className="text-stone-600">{challenge.description}</p>
       </div>
-      
-      {/* Status-specific UI */}
-      {isCompleted && (
-        <div className="bg-emerald-50 rounded-2xl p-4 mb-6 border-2 border-emerald-200">
-          <p className="text-emerald-600 font-bold text-lg">✅ Completed!</p>
-          <p className="text-emerald-500 text-sm">Great job on this quest!</p>
+
+      {/* Instructions if available */}
+      {challenge.instructions && (
+        <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
+          <h3 className="font-semibold text-amber-800 mb-2">📝 How to Complete</h3>
+          <div className="text-amber-700 whitespace-pre-line text-sm">
+            {challenge.instructions}
+          </div>
         </div>
       )}
-      
-      {isPendingReview && (
-        <div className="bg-amber-50 rounded-2xl p-4 mb-6 border-2 border-amber-200">
-          <p className="text-amber-600 font-bold text-lg">⏳ Waiting for Review</p>
-          <p className="text-amber-500 text-sm">A grown-up needs to check this!</p>
-        </div>
-      )}
-      
+
+      {/* Reward */}
+      <div className="bg-gradient-to-r from-amber-100 to-yellow-100 rounded-2xl p-4 text-center border-2 border-amber-200">
+        <p className="text-amber-600 text-sm font-semibold mb-1">Reward</p>
+        <p className="text-3xl font-bold text-amber-700">
+          🎁 {challenge.reward} points
+        </p>
+      </div>
+
       {/* Action buttons */}
       <div className="space-y-3">
-        {/* Not started yet */}
-        {!isActive && !isPendingReview && !isCompleted && onStart && (
-          <button onClick={onStart} className="btn btn-primary w-full text-lg">
-            🚀 Start This Quest!
+        {/* Not started yet - parent can assign */}
+        {onStart && !isActive && !isPendingReview && !isCompleted && (
+          <button
+            onClick={onStart}
+            className="btn btn-primary w-full text-lg py-4"
+          >
+            🚀 Start This Quest
           </button>
         )}
-        
-        {/* Active - kid can mark done */}
-        {isActive && !isPendingReview && onMarkDone && (
+
+        {/* In progress - mark done */}
+        {isActive && onMarkDone && (
           <>
-            <button onClick={onMarkDone} className="btn btn-success w-full text-lg">
-              ✋ I Did It!
+            <button
+              onClick={onMarkDone}
+              className="btn btn-primary w-full text-lg py-4"
+            >
+              ✅ I Did It!
             </button>
             {onAbandon && (
-              <button onClick={onAbandon} className="btn btn-outline w-full text-sm">
-                Give up on this quest
+              <button
+                onClick={onAbandon}
+                className="btn btn-outline w-full text-stone-500"
+              >
+                Give Up
               </button>
             )}
           </>
         )}
-        
-        {/* Pending review - parent actions */}
-        {isPendingReview && (
+
+        {/* Pending review - approve/reject */}
+        {isPendingReview && (onApprove || onReject) && (
           <div className="space-y-3">
-            <p className="text-stone-500 text-sm font-semibold">Parent Review:</p>
+            <div className="bg-violet-50 rounded-xl p-4 text-center border border-violet-200">
+              <p className="text-violet-600">
+                Waiting for parent approval...
+              </p>
+            </div>
             {onApprove && (
-              <button onClick={onApprove} className="btn btn-success w-full text-lg">
-                ✅ Approve - Quest Complete!
+              <button
+                onClick={onApprove}
+                className="btn w-full text-lg py-4 bg-emerald-500 text-white hover:bg-emerald-600"
+              >
+                ✅ Approve
               </button>
             )}
             {onReject && (
-              <button onClick={onReject} className="btn btn-outline w-full">
-                ↩️ Not quite - try again
+              <button
+                onClick={onReject}
+                className="btn btn-outline w-full"
+              >
+                ↩️ Try Again
               </button>
             )}
+          </div>
+        )}
+
+        {/* Completed */}
+        {isCompleted && !isActive && !isPendingReview && (
+          <div className="bg-emerald-50 rounded-2xl p-4 text-center border border-emerald-200">
+            <span className="text-3xl">🏆</span>
+            <p className="text-emerald-700 font-semibold mt-2">
+              Quest Completed!
+            </p>
           </div>
         )}
       </div>

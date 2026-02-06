@@ -6,6 +6,25 @@
 
 ---
 
+## Table of Contents
+
+1. [Product Vision](#1-product-vision) — What we're building and for whom
+2. [Current State (MVP)](#2-current-state-mvp) — What exists today
+3. [Target State (v1.0)](#3-target-state-v10-app-store-release) — Where we're headed
+4. [Features — Detailed Specs](#4-features--detailed-specifications) — How each feature works
+   - [4.1 Custom Challenges](#41-custom-challenges-phase-2a)
+   - [4.2 Vibe Tags](#42-vibe-tags-phase-2b)
+   - [4.3 Points Economy](#43-points-economy-phase-2c)
+   - [4.4 Supabase Backend](#44-supabase-backend-phase-3)
+   - [4.5 Native Mobile Apps](#45-native-mobile-apps-phase-4)
+5. [Roadmap](#5-roadmap) — Phases and checkboxes
+6. [Technical Architecture](#6-technical-architecture) — How it's built
+7. [Design Principles](#7-design-principles) — Guidelines for UI, code, and data
+8. [Open Questions](#8-open-questions) — Decisions still to make
+9. [Appendix](#9-appendix) — Schemas, user journeys, competitive landscape
+
+---
+
 ## For AI Agents Working on This Project
 
 This PRD is the canonical source of truth for Quest Cards. Before making architectural decisions, building features, or refactoring code:

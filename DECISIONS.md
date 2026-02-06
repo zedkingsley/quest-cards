@@ -1,7 +1,36 @@
-# DECISIONS.md - Challenge App Build Log
+# DECISIONS.md - Quest Cards Build Log
 
-This document tracks every significant decision made during the overnight MVP build.
-Format: Question → My Answer → Reasoning
+This document tracks every significant decision made during builds.
+
+---
+
+## Codebot Decision-Making Framework
+
+**Rule: Codebot is autonomous during build sessions.**
+
+When building, I don't ask Zed questions. Instead:
+
+1. **Identify the decision** — What's unclear or has multiple valid options?
+
+2. **Analyze from multiple perspectives:**
+   - 👤 **User personas** — What does a parent want? A kid? A couple using P2P?
+   - 💰 **Business** — Does this support growth, retention, monetization?
+   - 🔧 **Technical** — Is it scalable? Maintainable? Future-proof?
+   - 🎨 **Design** — Is it intuitive? Delightful? Consistent?
+   - ⚡ **Pragmatic** — Can we ship it today, or is it scope creep?
+
+3. **Make the call** — Pick the best option and commit.
+
+4. **Document it** — Add to this file under the relevant build session.
+
+5. **Keep building** — Don't stop until the task is COMPLETE and workable.
+
+6. **Surface when done** — Only come back to Zed with a finished, testable result.
+
+**Escalation (rare):** Only pause for Zed if the decision would be:
+- Irreversible AND expensive to undo (e.g., mass data migration)
+- Outside the stated scope (e.g., "should we pivot to a different product?")
+- Requires spending money (e.g., paid API, hosting tier)
 
 ---
 

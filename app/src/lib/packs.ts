@@ -1,6 +1,7 @@
 // Quest Cards - Challenge Packs Data
+// Updated for points-based rewards
 
-import { Pack } from './types';
+import { Pack, Challenge } from './types';
 
 export const PACKS: Pack[] = [
   {
@@ -9,6 +10,7 @@ export const PACKS: Pack[] = [
     description: "A mix of fun challenges to get started. Perfect first quests!",
     icon: "⭐",
     category: "mixed",
+    isBuiltIn: true,
     challenges: [
       {
         slug: "make-your-bed-7-days",
@@ -16,8 +18,7 @@ export const PACKS: Pack[] = [
         description: "Make your bed every morning for 7 days in a row!",
         icon: "🛏️",
         difficulty: "easy",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "1 week"
       },
       {
@@ -26,8 +27,7 @@ export const PACKS: Pack[] = [
         description: "Try a new food you've never eaten before. One real bite!",
         icon: "🍽️",
         difficulty: "easy",
-        reward_type: "money",
-        reward_value: "$2",
+        reward: 20,
         time_estimate: "1 day"
       },
       {
@@ -36,8 +36,7 @@ export const PACKS: Pack[] = [
         description: "Learn a joke and tell it to 3 different people!",
         icon: "😂",
         difficulty: "easy",
-        reward_type: "money",
-        reward_value: "$2",
+        reward: 20,
         time_estimate: "1 day"
       },
       {
@@ -46,8 +45,7 @@ export const PACKS: Pack[] = [
         description: "Do something helpful without being asked. Surprise someone!",
         icon: "🦸",
         difficulty: "easy",
-        reward_type: "money",
-        reward_value: "$2",
+        reward: 20,
         time_estimate: "1 day"
       },
       {
@@ -56,8 +54,7 @@ export const PACKS: Pack[] = [
         description: "Read a book you've never read before (or have someone read it to you).",
         icon: "📚",
         difficulty: "easy",
-        reward_type: "money",
-        reward_value: "$2",
+        reward: 20,
         time_estimate: "1 day"
       },
       {
@@ -66,8 +63,7 @@ export const PACKS: Pack[] = [
         description: "Draw a picture of your family. Include everyone!",
         icon: "👨‍👩‍👧",
         difficulty: "easy",
-        reward_type: "money",
-        reward_value: "$2",
+        reward: 20,
         time_estimate: "30 minutes"
       },
       {
@@ -76,8 +72,7 @@ export const PACKS: Pack[] = [
         description: "Learn 5 new words this week. Use each one in a sentence!",
         icon: "📝",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "1 week"
       },
       {
@@ -86,8 +81,7 @@ export const PACKS: Pack[] = [
         description: "Clean your whole room without any reminders!",
         icon: "✨",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "1 hour"
       },
       {
@@ -96,8 +90,7 @@ export const PACKS: Pack[] = [
         description: "Give 5 genuine compliments to different people today!",
         icon: "💝",
         difficulty: "easy",
-        reward_type: "money",
-        reward_value: "$2",
+        reward: 20,
         time_estimate: "1 day"
       },
       {
@@ -106,8 +99,7 @@ export const PACKS: Pack[] = [
         description: "Do your whole morning routine by yourself for 3 days!",
         icon: "🌅",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$4",
+        reward: 40,
         time_estimate: "3 days"
       }
     ]
@@ -118,6 +110,7 @@ export const PACKS: Pack[] = [
     description: "Creative challenges for little artists. Draw, paint, build, create!",
     icon: "🎨",
     category: "creative",
+    isBuiltIn: true,
     challenges: [
       {
         slug: "monster-maker",
@@ -125,8 +118,7 @@ export const PACKS: Pack[] = [
         description: "Design your own monster! Give it a name and special powers.",
         icon: "👹",
         difficulty: "easy",
-        reward_type: "money",
-        reward_value: "$2",
+        reward: 20,
         time_estimate: "30 minutes"
       },
       {
@@ -135,8 +127,7 @@ export const PACKS: Pack[] = [
         description: "Make art using only things from outside - leaves, sticks, rocks!",
         icon: "🍂",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "1 hour"
       },
       {
@@ -145,8 +136,7 @@ export const PACKS: Pack[] = [
         description: "Build something cool from cardboard boxes. Robot? Castle? Spaceship?",
         icon: "📦",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$4",
+        reward: 40,
         time_estimate: "2 hours"
       },
       {
@@ -155,8 +145,7 @@ export const PACKS: Pack[] = [
         description: "Look in a mirror and draw yourself! Try to get the details right.",
         icon: "🪞",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "30 minutes"
       },
       {
@@ -165,8 +154,7 @@ export const PACKS: Pack[] = [
         description: "Mix paints to create 5 new colors. Name each one!",
         icon: "🌈",
         difficulty: "easy",
-        reward_type: "money",
-        reward_value: "$2",
+        reward: 20,
         time_estimate: "30 minutes"
       },
       {
@@ -175,8 +163,7 @@ export const PACKS: Pack[] = [
         description: "Draw a comic strip with at least 4 panels. Tell a story!",
         icon: "💭",
         difficulty: "hard",
-        reward_type: "money",
-        reward_value: "$5",
+        reward: 50,
         time_estimate: "1 hour"
       },
       {
@@ -185,8 +172,7 @@ export const PACKS: Pack[] = [
         description: "Make a piece of art as a gift for someone. Give it to them!",
         icon: "🎁",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "1 hour"
       },
       {
@@ -195,8 +181,7 @@ export const PACKS: Pack[] = [
         description: "Make 5 different animals out of playdough or clay.",
         icon: "🦁",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "45 minutes"
       }
     ]
@@ -207,6 +192,7 @@ export const PACKS: Pack[] = [
     description: "Real-world skills that last a lifetime. Learn by doing!",
     icon: "🌟",
     category: "life-skills",
+    isBuiltIn: true,
     challenges: [
       {
         slug: "write-letter",
@@ -215,8 +201,7 @@ export const PACKS: Pack[] = [
         instructions: "1. Write your letter (draw pictures too!)\n2. Put it in an envelope\n3. Write the address on the front\n4. Put a stamp on it\n5. Mail it together!",
         icon: "✉️",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$4",
+        reward: 40,
         time_estimate: "1 hour"
       },
       {
@@ -225,8 +210,7 @@ export const PACKS: Pack[] = [
         description: "Make breakfast for yourself (with a grown-up nearby for safety).",
         icon: "🍳",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "30 minutes"
       },
       {
@@ -235,8 +219,7 @@ export const PACKS: Pack[] = [
         description: "Memorize a parent's phone number. Recite it from memory!",
         icon: "📱",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "1 week"
       },
       {
@@ -245,8 +228,7 @@ export const PACKS: Pack[] = [
         description: "Learn to tie your shoes by yourself. Do it 3 times in a row!",
         icon: "👟",
         difficulty: "hard",
-        reward_type: "money",
-        reward_value: "$5",
+        reward: 50,
         time_estimate: "1 week"
       },
       {
@@ -255,8 +237,7 @@ export const PACKS: Pack[] = [
         description: "Set the table for dinner every night for a week. All by yourself!",
         icon: "🍽️",
         difficulty: "easy",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "1 week"
       },
       {
@@ -266,8 +247,7 @@ export const PACKS: Pack[] = [
         instructions: "Pick a simple recipe like:\n- Ants on a log (celery + peanut butter + raisins)\n- Fruit salad\n- Trail mix\n- Smoothie",
         icon: "📖",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "30 minutes"
       },
       {
@@ -276,8 +256,7 @@ export const PACKS: Pack[] = [
         description: "Fold a whole basket of laundry. Make it neat!",
         icon: "👕",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "30 minutes"
       },
       {
@@ -286,8 +265,7 @@ export const PACKS: Pack[] = [
         description: "Learn your full home address. Recite it from memory!",
         icon: "🏠",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "1 week"
       }
     ]
@@ -298,6 +276,7 @@ export const PACKS: Pack[] = [
     description: "Puzzles, riddles, and learning challenges to grow your brain!",
     icon: "🧠",
     category: "learning",
+    isBuiltIn: true,
     challenges: [
       {
         slug: "memorize-poem",
@@ -306,8 +285,7 @@ export const PACKS: Pack[] = [
         instructions: "Pick a poem that's 4-8 lines long. Practice a little each day. When you're ready, perform it!",
         icon: "📜",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$4",
+        reward: 40,
         time_estimate: "1 week"
       },
       {
@@ -317,8 +295,7 @@ export const PACKS: Pack[] = [
         instructions: "1. Learn a card game, board game, or outdoor game\n2. Practice until you know the rules well\n3. Teach it to a family member or friend\n4. Play it together!",
         icon: "🎲",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$4",
+        reward: 40,
         time_estimate: "3 days"
       },
       {
@@ -327,8 +304,7 @@ export const PACKS: Pack[] = [
         description: "Learn 3 riddles and stump your family with them!",
         icon: "❓",
         difficulty: "easy",
-        reward_type: "money",
-        reward_value: "$2",
+        reward: 20,
         time_estimate: "1 day"
       },
       {
@@ -337,8 +313,7 @@ export const PACKS: Pack[] = [
         description: "Count to 100 out loud without any mistakes!",
         icon: "🔢",
         difficulty: "easy",
-        reward_type: "money",
-        reward_value: "$2",
+        reward: 20,
         time_estimate: "15 minutes"
       },
       {
@@ -347,8 +322,7 @@ export const PACKS: Pack[] = [
         description: "Complete a jigsaw puzzle by yourself. At least 50 pieces!",
         icon: "🧩",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "2 hours"
       },
       {
@@ -358,8 +332,7 @@ export const PACKS: Pack[] = [
         instructions: "Think of something you're curious about:\n- Why is the sky blue?\n- How do planes fly?\n- Why do we dream?\n\nLook up the answer with a grown-up and explain what you learned!",
         icon: "🔬",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "1 hour"
       },
       {
@@ -368,8 +341,7 @@ export const PACKS: Pack[] = [
         description: "Say the alphabet backwards without looking!",
         icon: "🔤",
         difficulty: "hard",
-        reward_type: "money",
-        reward_value: "$5",
+        reward: 50,
         time_estimate: "1 week"
       },
       {
@@ -378,8 +350,7 @@ export const PACKS: Pack[] = [
         description: "Beat a family member at a memory matching game 3 times!",
         icon: "🃏",
         difficulty: "medium",
-        reward_type: "money",
-        reward_value: "$3",
+        reward: 30,
         time_estimate: "1 week"
       }
     ]
@@ -390,8 +361,14 @@ export function getPack(slug: string): Pack | undefined {
   return PACKS.find(p => p.slug === slug);
 }
 
-export function getChallenge(packSlug: string, challengeSlug: string) {
+export function getChallenge(packSlug: string, challengeSlug: string): Challenge | undefined {
   const pack = getPack(packSlug);
   if (!pack) return undefined;
   return pack.challenges.find(c => c.slug === challengeSlug);
+}
+
+export function getAllChallenges(): { challenge: Challenge; pack: Pack }[] {
+  return PACKS.flatMap(pack => 
+    pack.challenges.map(challenge => ({ challenge, pack }))
+  );
 }

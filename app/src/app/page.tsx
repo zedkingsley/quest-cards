@@ -1,109 +1,187 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Kid, Pack, Challenge, ChallengeWithDetails } from '@/lib/types';
+import { useState, useEffect, useCallback } from 'react';
+import { FamilyMember, Pack, Challenge, QuestWithDetails, Reward } from '@/lib/types';
 import { PACKS } from '@/lib/packs';
 import {
   getFamily,
   createFamily,
-  getKids,
-  addKid,
-  removeKid,
-  getActiveChallenge,
-  getCompletedChallenges,
-  getKidStats,
-  startChallenge,
-  submitChallenge,
-  approveChallenge,
-  rejectChallenge,
-  abandonChallenge,
+  verifyPin,
+  getMembers,
+  getMember,
+  addMember,
+  removeMember,
+  getActiveQuest,
+  getCompletedQuests,
+  getMemberStats,
+  startPackQuest,
+  issueChallenge,
+  submitQuest,
+  approveQuest,
+  rejectQuest,
+  abandonQuest,
   hasCompletedChallenge,
+  getQuestWithDetails,
+  getPendingApprovals,
+  getRewardsOwnedBy,
+  getRewardsAvailableTo,
+  addReward,
+  updateReward,
+  deleteReward,
+  redeemReward,
+  getPendingRedemptions,
+  fulfillRedemption,
   resetAllData,
+  initializeDemoData,
 } from '@/lib/storage';
-import { Navigation } from '@/components/Navigation';
-import { KidSelector } from '@/components/KidSelector';
+import { Navigation, Tab } from '@/components/Navigation';
+import { MemberSelector } from '@/components/MemberSelector';
 import { ChallengeCard } from '@/components/ChallengeCard';
 import { PackCard } from '@/components/PackCard';
 import { Modal } from '@/components/Modal';
 import { ChallengeDetail } from '@/components/ChallengeDetail';
-import { AddKid } from '@/components/AddKid';
+import { AddMember } from '@/components/AddMember';
 import { ActiveQuest } from '@/components/ActiveQuest';
-
-type Tab = 'home' | 'packs' | 'trophy' | 'settings';
+import { PinPad } from '@/components/PinPad';
+import { IssueChallenge } from '@/components/IssueChallenge';
+import { RewardShop } from '@/components/RewardShop';
+import { ManageRewards } from '@/components/ManageRewards';
+import { PendingApprovals } from '@/components/PendingApprovals';
 
 export default function Home() {
   // Core state
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>('home');
-  const [kids, setKids] = useState<Kid[]>([]);
-  const [selectedKidId, setSelectedKidId] = useState<string | null>(null);
+  const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [currentMemberId, setCurrentMemberId] = useState<string | null>(null);
   
   // Modal state
-  const [showAddKid, setShowAddKid] = useState(false);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [showPinPad, setShowPinPad] = useState(false);
+  const [pinError, setPinError] = useState(false);
+  const [pinAction, setPinAction] = useState<(() => void) | null>(null);
   const [selectedPack, setSelectedPack] = useState<Pack | null>(null);
+  const [showIssueChallenge, setShowIssueChallenge] = useState(false);
+  const [showManageRewards, setShowManageRewards] = useState(false);
   const [selectedChallenge, setSelectedChallenge] = useState<{
     challenge: Challenge;
     pack: Pack;
     isActive?: boolean;
     isPending?: boolean;
     isCompleted?: boolean;
-    kidChallengeId?: string;
-    customReward?: string;
+    questId?: string;
   } | null>(null);
   
   // Derived state
-  const selectedKid = kids.find(k => k.id === selectedKidId);
-  const activeQuest = selectedKidId ? getActiveChallenge(selectedKidId) : null;
-  const completedChallenges = selectedKidId ? getCompletedChallenges(selectedKidId) : [];
-  const kidStats = selectedKidId ? getKidStats(selectedKidId) : null;
+  const currentMember = members.find(m => m.id === currentMemberId);
+  const isParent = currentMember?.role === 'parent';
+  const children = members.filter(m => m.role === 'child');
+  const parents = members.filter(m => m.role === 'parent');
+  
+  const activeQuest = currentMemberId ? getActiveQuest(currentMemberId) : null;
+  const activeQuestDetails = activeQuest ? getQuestWithDetails(activeQuest) : null;
+  const completedQuests = currentMemberId ? getCompletedQuests(currentMemberId) : [];
+  const memberStats = currentMemberId ? getMemberStats(currentMemberId) : null;
+  
+  // Parent-specific data
+  const pendingApprovals = isParent && currentMemberId
+    ? getPendingApprovals(currentMemberId).map(q => getQuestWithDetails(q)).filter((q): q is QuestWithDetails => q !== null)
+    : [];
+  const pendingRedemptions = isParent && currentMemberId
+    ? getPendingRedemptions(currentMemberId)
+    : [];
+  const myRewards = isParent && currentMemberId
+    ? getRewardsOwnedBy(currentMemberId)
+    : [];
+  
+  // Child-specific data
+  const availableRewards = !isParent && currentMemberId
+    ? getRewardsAvailableTo(currentMemberId)
+    : [];
 
   // Initialize on mount
   useEffect(() => {
-    // Ensure family exists
-    if (!getFamily()) {
-      createFamily('Our Family');
+    const family = getFamily();
+    if (!family) {
+      initializeDemoData();
     }
     
-    // Load kids
-    const loadedKids = getKids();
-    setKids(loadedKids);
+    const loadedMembers = getMembers();
+    setMembers(loadedMembers);
     
-    // Select first kid if available
-    if (loadedKids.length > 0) {
-      setSelectedKidId(loadedKids[0].id);
+    // Select first member if available
+    if (loadedMembers.length > 0) {
+      setCurrentMemberId(loadedMembers[0].id);
     }
     
     setIsLoading(false);
   }, []);
 
   // Refresh state helper
-  const refreshState = () => {
-    setKids(getKids());
+  const refreshState = useCallback(() => {
+    setMembers(getMembers());
+  }, []);
+
+  // PIN verification wrapper
+  const requirePin = (action: () => void) => {
+    const family = getFamily();
+    if (family?.settings.requirePinForApproval) {
+      setPinAction(() => action);
+      setShowPinPad(true);
+      setPinError(false);
+    } else {
+      action();
+    }
+  };
+
+  const handlePinSubmit = (pin: string) => {
+    if (verifyPin(pin)) {
+      setShowPinPad(false);
+      setPinError(false);
+      if (pinAction) {
+        pinAction();
+        setPinAction(null);
+      }
+    } else {
+      setPinError(true);
+    }
   };
 
   // Handlers
-  const handleAddKid = (name: string, avatar: string) => {
-    const newKid = addKid(name, avatar);
+  const handleAddMember = (name: string, avatar: string, role: 'parent' | 'child') => {
+    const newMember = addMember(name, avatar, role);
     refreshState();
-    setSelectedKidId(newKid.id);
-    setShowAddKid(false);
+    if (!currentMemberId) {
+      setCurrentMemberId(newMember.id);
+    }
+    setShowAddMember(false);
   };
 
-  const handleRemoveKid = (kidId: string) => {
-    if (confirm('Remove this kid? Their progress will be deleted.')) {
-      removeKid(kidId);
+  const handleRemoveMember = (memberId: string) => {
+    if (confirm('Remove this family member? Their progress will be deleted.')) {
+      removeMember(memberId);
       refreshState();
-      if (selectedKidId === kidId) {
-        const remaining = getKids();
-        setSelectedKidId(remaining.length > 0 ? remaining[0].id : null);
+      if (currentMemberId === memberId) {
+        const remaining = getMembers();
+        setCurrentMemberId(remaining.length > 0 ? remaining[0].id : null);
       }
     }
   };
 
-  const handleStartChallenge = () => {
-    if (!selectedKidId || !selectedChallenge) return;
-    startChallenge(
-      selectedKidId,
+  const handleStartPackChallenge = () => {
+    if (!currentMemberId || !selectedChallenge || !isParent) return;
+    
+    // For pack challenges, parent issues to the current view member
+    // If viewing self (parent), need to pick a child
+    const recipientId = currentMember?.role === 'child' 
+      ? currentMemberId 
+      : children[0]?.id;
+    
+    if (!recipientId) return;
+    
+    startPackQuest(
+      recipientId,
+      currentMemberId,
       selectedChallenge.pack.slug,
       selectedChallenge.challenge.slug
     );
@@ -111,34 +189,67 @@ export default function Home() {
     refreshState();
   };
 
+  const handleIssueChallenge = (
+    recipientId: string,
+    title: string,
+    description: string,
+    icon: string,
+    reward: number,
+    customRewardText?: string
+  ) => {
+    if (!currentMemberId) return;
+    issueChallenge(recipientId, currentMemberId, title, description, icon, reward, customRewardText);
+    setShowIssueChallenge(false);
+    refreshState();
+  };
+
   const handleMarkDone = () => {
     if (!activeQuest) return;
-    submitChallenge(activeQuest.id);
+    submitQuest(activeQuest.id);
     setSelectedChallenge(null);
     refreshState();
   };
 
-  const handleApprove = () => {
-    if (!activeQuest) return;
-    approveChallenge(activeQuest.id);
-    setSelectedChallenge(null);
-    refreshState();
+  const handleApprove = (questId: string) => {
+    requirePin(() => {
+      approveQuest(questId);
+      refreshState();
+    });
   };
 
-  const handleReject = () => {
-    if (!activeQuest) return;
-    rejectChallenge(activeQuest.id, 'Keep trying!');
-    setSelectedChallenge(null);
+  const handleReject = (questId: string) => {
+    rejectQuest(questId, 'Keep trying!');
     refreshState();
   };
 
   const handleAbandon = () => {
     if (!activeQuest) return;
     if (confirm('Give up on this quest?')) {
-      abandonChallenge(activeQuest.id);
+      abandonQuest(activeQuest.id);
       setSelectedChallenge(null);
       refreshState();
     }
+  };
+
+  const handleRedeemReward = (rewardId: string) => {
+    if (!currentMemberId) return;
+    if (confirm('Redeem this reward?')) {
+      redeemReward(rewardId, currentMemberId);
+      refreshState();
+    }
+  };
+
+  const handleFulfillRedemption = (redemptionId: string) => {
+    requirePin(() => {
+      fulfillRedemption(redemptionId);
+      refreshState();
+    });
+  };
+
+  const handleAddReward = (name: string, pointCost: number, icon: string, description?: string, availableTo?: string[]) => {
+    if (!currentMemberId) return;
+    addReward(currentMemberId, name, pointCost, icon, description, availableTo || []);
+    refreshState();
   };
 
   const handleResetData = () => {
@@ -149,8 +260,10 @@ export default function Home() {
   };
 
   const openChallengeDetail = (challenge: Challenge, pack: Pack) => {
-    const isCompleted = selectedKidId ? hasCompletedChallenge(selectedKidId, pack.slug, challenge.slug) : false;
-    const isActive = activeQuest?.challengeSlug === challenge.slug && activeQuest?.packSlug === pack.slug;
+    if (!currentMemberId) return;
+    
+    const isCompleted = hasCompletedChallenge(currentMemberId, pack.slug, challenge.slug);
+    const isActive = activeQuest?.packSlug === pack.slug && activeQuest?.challengeSlug === challenge.slug;
     const isPending = isActive && activeQuest?.status === 'pending_review';
     
     setSelectedChallenge({
@@ -159,15 +272,14 @@ export default function Home() {
       isActive: isActive && !isPending,
       isPending,
       isCompleted: isCompleted && !isActive,
-      kidChallengeId: isActive ? activeQuest?.id : undefined,
-      customReward: isActive ? activeQuest?.customReward : undefined,
+      questId: isActive ? activeQuest?.id : undefined,
     });
   };
 
   const getPackCompletedCount = (pack: Pack): number => {
-    if (!selectedKidId) return 0;
+    if (!currentMemberId) return 0;
     return pack.challenges.filter(c => 
-      hasCompletedChallenge(selectedKidId, pack.slug, c.slug)
+      hasCompletedChallenge(currentMemberId, pack.slug, c.slug)
     ).length;
   };
 
@@ -187,11 +299,15 @@ export default function Home() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <span>⭐</span> Quest Cards
           </h1>
-          {selectedKid && (
-            <div className="flex items-center gap-2 bg-white/20 rounded-full px-3 py-1">
-              <span className="text-xl">{selectedKid.avatar}</span>
-              <span className="font-semibold">{selectedKid.name}</span>
-            </div>
+          {currentMember && (
+            <button 
+              onClick={() => setActiveTab('family')}
+              className="flex items-center gap-2 bg-white/20 rounded-full px-3 py-1 hover:bg-white/30 transition-all"
+            >
+              <span className="text-xl">{currentMember.avatar}</span>
+              <span className="font-semibold">{currentMember.name}</span>
+              <span className="text-amber-200 text-sm">⭐{currentMember.pointsBalance}</span>
+            </button>
           )}
         </div>
       </header>
@@ -201,35 +317,82 @@ export default function Home() {
         {/* HOME TAB */}
         {activeTab === 'home' && (
           <div className="space-y-6">
-            {/* Kid Selector */}
+            {/* Member Selector */}
             <section>
               <h2 className="text-lg font-bold text-stone-700 mb-3">Who's playing?</h2>
-              <KidSelector
-                kids={kids}
-                selectedKidId={selectedKidId}
-                onSelect={setSelectedKidId}
-                onAddKid={() => setShowAddKid(true)}
+              <MemberSelector
+                members={members}
+                selectedId={currentMemberId}
+                onSelect={setCurrentMemberId}
+                onAddMember={() => setShowAddMember(true)}
               />
             </section>
 
-            {selectedKid && (
+            {currentMember && (
               <>
+                {/* Pending Approvals (for parents) */}
+                {isParent && pendingApprovals.length > 0 && (
+                  <PendingApprovals
+                    quests={pendingApprovals}
+                    onApprove={handleApprove}
+                    onReject={handleReject}
+                  />
+                )}
+
+                {/* Pending Redemptions (for parents) */}
+                {isParent && pendingRedemptions.length > 0 && (
+                  <section>
+                    <h2 className="text-lg font-bold text-stone-700 mb-3">
+                      Rewards to Fulfill
+                    </h2>
+                    <div className="space-y-2">
+                      {pendingRedemptions.map((r) => (
+                        <div key={r.id} className="flex items-center gap-3 bg-violet-50 rounded-xl p-4 border border-violet-200">
+                          <span className="text-2xl">{r.reward.icon}</span>
+                          <div className="flex-1">
+                            <p className="font-semibold text-stone-700">{r.reward.name}</p>
+                            <p className="text-sm text-stone-500">
+                              {r.claimer.avatar} {r.claimer.name} redeemed {r.pointsSpent} pts
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleFulfillRedemption(r.id)}
+                            className="px-3 py-2 bg-violet-500 text-white text-sm font-semibold rounded-lg"
+                          >
+                            ✓ Done
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
                 {/* Active Quest */}
-                {activeQuest ? (
+                {activeQuestDetails ? (
                   <section>
                     <h2 className="text-lg font-bold text-stone-700 mb-3">Current Quest</h2>
                     <ActiveQuest
-                      quest={activeQuest}
-                      onClick={() => openChallengeDetail(activeQuest.challenge, activeQuest.pack)}
+                      quest={{
+                        ...activeQuestDetails,
+                        challenge: activeQuestDetails.challenge as Challenge,
+                        pack: activeQuestDetails.pack || { slug: 'custom', name: 'Custom', icon: '⭐', description: '', category: 'custom', challenges: [], isBuiltIn: false },
+                      }}
+                      onClick={() => {
+                        if (activeQuestDetails.pack) {
+                          openChallengeDetail(activeQuestDetails.challenge as Challenge, activeQuestDetails.pack);
+                        }
+                      }}
                     />
                   </section>
                 ) : (
                   <section className="text-center py-8 bg-stone-50 rounded-3xl">
                     <div className="text-5xl mb-3">🗺️</div>
                     <h3 className="font-bold text-lg text-stone-700 mb-2">No active quest!</h3>
-                    <p className="text-stone-500 mb-4">Pick a new adventure from the packs.</p>
+                    <p className="text-stone-500 mb-4">
+                      {isParent ? 'Issue a challenge or pick from packs.' : 'Ask a parent for a quest!'}
+                    </p>
                     <button
-                      onClick={() => setActiveTab('packs')}
+                      onClick={() => setActiveTab('challenges')}
                       className="btn btn-primary"
                     >
                       Browse Quests
@@ -238,32 +401,32 @@ export default function Home() {
                 )}
 
                 {/* Quick Stats */}
-                {kidStats && kidStats.completedCount > 0 && (
+                {memberStats && (
                   <section className="grid grid-cols-2 gap-4">
-                    <div className="bg-emerald-50 rounded-2xl p-4 text-center border-2 border-emerald-100">
-                      <div className="text-3xl font-bold text-emerald-600">{kidStats.completedCount}</div>
-                      <div className="text-sm text-emerald-600">Quests Done</div>
-                    </div>
                     <div className="bg-amber-50 rounded-2xl p-4 text-center border-2 border-amber-100">
-                      <div className="text-3xl font-bold text-amber-600">${kidStats.totalEarned}</div>
-                      <div className="text-sm text-amber-600">Earned</div>
+                      <div className="text-3xl font-bold text-amber-600">⭐ {memberStats.pointsBalance}</div>
+                      <div className="text-sm text-amber-600">Points</div>
+                    </div>
+                    <div className="bg-emerald-50 rounded-2xl p-4 text-center border-2 border-emerald-100">
+                      <div className="text-3xl font-bold text-emerald-600">{memberStats.completedCount}</div>
+                      <div className="text-sm text-emerald-600">Quests Done</div>
                     </div>
                   </section>
                 )}
 
                 {/* Recent Completions */}
-                {kidStats && kidStats.recentCompletions.length > 0 && (
+                {memberStats && memberStats.recentCompletions.length > 0 && (
                   <section>
                     <h2 className="text-lg font-bold text-stone-700 mb-3">Recent Wins 🎉</h2>
                     <div className="space-y-2">
-                      {kidStats.recentCompletions.slice(0, 3).map((c) => (
+                      {memberStats.recentCompletions.slice(0, 3).map((c) => (
                         <div key={c.id} className="flex items-center gap-3 bg-white rounded-xl p-3 border border-stone-100">
                           <span className="text-2xl">{c.challenge.icon}</span>
                           <div className="flex-1">
                             <p className="font-semibold text-stone-700">{c.challenge.title}</p>
-                            <p className="text-xs text-stone-400">{c.pack.name}</p>
+                            <p className="text-xs text-stone-400">{c.pack?.name || 'Custom Challenge'}</p>
                           </div>
-                          <span className="text-emerald-500 font-bold">✓</span>
+                          <span className="text-amber-500 font-bold">+{c.reward} ⭐</span>
                         </div>
                       ))}
                     </div>
@@ -274,9 +437,19 @@ export default function Home() {
           </div>
         )}
 
-        {/* PACKS TAB */}
-        {activeTab === 'packs' && (
+        {/* CHALLENGES TAB */}
+        {activeTab === 'challenges' && (
           <div className="space-y-6">
+            {/* Issue Challenge button (parents only) */}
+            {isParent && (
+              <button
+                onClick={() => setShowIssueChallenge(true)}
+                className="w-full py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transition-all active:scale-98"
+              >
+                🎯 Issue a Challenge
+              </button>
+            )}
+
             {selectedPack ? (
               // Show challenges in selected pack
               <>
@@ -302,7 +475,7 @@ export default function Home() {
                       key={challenge.slug}
                       challenge={challenge}
                       packIcon={selectedPack.icon}
-                      completed={selectedKidId ? hasCompletedChallenge(selectedKidId, selectedPack.slug, challenge.slug) : false}
+                      completed={currentMemberId ? hasCompletedChallenge(currentMemberId, selectedPack.slug, challenge.slug) : false}
                       onClick={() => openChallengeDetail(challenge, selectedPack)}
                     />
                   ))}
@@ -329,60 +502,99 @@ export default function Home() {
           </div>
         )}
 
-        {/* TROPHY TAB */}
-        {activeTab === 'trophy' && (
+        {/* FAMILY TAB */}
+        {activeTab === 'family' && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-stone-800">Rewards & Wins</h2>
+            <h2 className="text-2xl font-bold text-stone-800">Family</h2>
             
-            {selectedKid ? (
-              kidStats && kidStats.completedCount > 0 ? (
-                <>
-                  {/* Total earned */}
-                  <div className="bg-gradient-to-br from-amber-100 to-yellow-100 rounded-3xl p-6 text-center border-2 border-amber-200">
-                    <div className="text-5xl mb-2">🏆</div>
-                    <div className="text-4xl font-bold text-amber-700 mb-1">${kidStats.totalEarned}</div>
-                    <div className="text-amber-600">Total Earned</div>
-                    <div className="text-stone-500 text-sm mt-2">
-                      from {kidStats.completedCount} completed quests
-                    </div>
-                  </div>
+            {/* Parents */}
+            {parents.length > 0 && (
+              <section>
+                <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
+                  Parents
+                </h3>
+                <div className="space-y-2">
+                  {parents.map((member) => (
+                    <FamilyMemberCard
+                      key={member.id}
+                      member={member}
+                      isSelected={currentMemberId === member.id}
+                      onSelect={() => setCurrentMemberId(member.id)}
+                      onRemove={() => handleRemoveMember(member.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+            
+            {/* Children */}
+            {children.length > 0 && (
+              <section>
+                <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
+                  Children
+                </h3>
+                <div className="space-y-2">
+                  {children.map((member) => (
+                    <FamilyMemberCard
+                      key={member.id}
+                      member={member}
+                      isSelected={currentMemberId === member.id}
+                      onSelect={() => setCurrentMemberId(member.id)}
+                      onRemove={() => handleRemoveMember(member.id)}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
-                  {/* All completions */}
-                  <div>
-                    <h3 className="font-bold text-lg text-stone-700 mb-3">Completed Quests</h3>
-                    <div className="space-y-2">
-                      {completedChallenges.map((c) => (
-                        <div key={c.id} className="flex items-center gap-3 bg-white rounded-xl p-4 border border-stone-100">
-                          <span className="text-3xl">{c.challenge.icon}</span>
-                          <div className="flex-1">
-                            <p className="font-semibold text-stone-700">{c.challenge.title}</p>
-                            <p className="text-xs text-stone-400">{c.pack.name}</p>
-                          </div>
-                          <span className="font-bold text-amber-600">
-                            {c.customReward || c.challenge.reward_value}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-12 bg-stone-50 rounded-3xl">
-                  <div className="text-5xl mb-3">🏆</div>
-                  <h3 className="font-bold text-lg text-stone-700 mb-2">No rewards yet!</h3>
-                  <p className="text-stone-500 mb-4">Complete quests to earn rewards.</p>
+            <button
+              onClick={() => setShowAddMember(true)}
+              className="w-full py-4 rounded-2xl border-2 border-dashed border-stone-300 text-stone-500 hover:border-amber-400 hover:text-amber-600 transition-all font-semibold"
+            >
+              ➕ Add Family Member
+            </button>
+          </div>
+        )}
+
+        {/* SHOP TAB */}
+        {activeTab === 'shop' && currentMember && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-stone-800">Reward Shop</h2>
+              {isParent && (
+                <button
+                  onClick={() => setShowManageRewards(true)}
+                  className="px-4 py-2 bg-violet-100 text-violet-700 font-semibold rounded-xl hover:bg-violet-200 transition-all"
+                >
+                  ⚙️ Manage
+                </button>
+              )}
+            </div>
+            
+            {isParent ? (
+              // Parent view - manage rewards
+              <div className="space-y-4">
+                <p className="text-stone-500">
+                  Manage your reward shop or switch to a child to see their shop view.
+                </p>
+                <div className="bg-violet-50 rounded-2xl p-4 border border-violet-200">
+                  <p className="font-semibold text-violet-700 mb-2">Your Rewards</p>
+                  <p className="text-violet-600">{myRewards.filter(r => r.active).length} active rewards</p>
                   <button
-                    onClick={() => setActiveTab('packs')}
-                    className="btn btn-primary"
+                    onClick={() => setShowManageRewards(true)}
+                    className="mt-3 btn btn-primary w-full"
                   >
-                    Start a Quest
+                    Edit My Rewards
                   </button>
                 </div>
-              )
-            ) : (
-              <div className="text-center py-12 bg-stone-50 rounded-3xl">
-                <p className="text-stone-500">Select a kid to see their rewards!</p>
               </div>
+            ) : (
+              // Child view - redeem rewards
+              <RewardShop
+                viewer={currentMember}
+                rewardGroups={availableRewards}
+                onRedeem={handleRedeemReward}
+              />
             )}
           </div>
         )}
@@ -392,33 +604,21 @@ export default function Home() {
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-stone-800">Settings</h2>
             
-            {/* Manage Kids */}
+            {/* Family Info */}
             <section className="bg-white rounded-2xl p-4 border border-stone-100">
-              <h3 className="font-bold text-stone-700 mb-3">Manage Kids</h3>
-              {kids.length > 0 ? (
-                <div className="space-y-2">
-                  {kids.map((kid) => (
-                    <div key={kid.id} className="flex items-center gap-3 p-3 bg-stone-50 rounded-xl">
-                      <span className="text-2xl">{kid.avatar}</span>
-                      <span className="flex-1 font-semibold">{kid.name}</span>
-                      <button
-                        onClick={() => handleRemoveKid(kid.id)}
-                        className="text-red-400 hover:text-red-600 p-2 tap-target"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-stone-500">No kids added yet.</p>
-              )}
-              <button
-                onClick={() => setShowAddKid(true)}
-                className="btn btn-outline w-full mt-3"
-              >
-                ➕ Add Kid
-              </button>
+              <h3 className="font-bold text-stone-700 mb-3">Family</h3>
+              <p className="text-stone-600">{getFamily()?.name || 'My Family'}</p>
+              <p className="text-sm text-stone-400 mt-1">
+                PIN: {getFamily()?.pin || '1234'} (tap to change)
+              </p>
+            </section>
+
+            {/* Points Settings */}
+            <section className="bg-white rounded-2xl p-4 border border-stone-100">
+              <h3 className="font-bold text-stone-700 mb-3">Points</h3>
+              <p className="text-stone-600">
+                Exchange rate: {getFamily()?.settings.pointsPerDollar || 10} points = $1
+              </p>
             </section>
 
             {/* Danger Zone */}
@@ -431,32 +631,95 @@ export default function Home() {
                 🗑️ Reset All Data
               </button>
               <p className="text-red-400 text-xs mt-2 text-center">
-                This will delete all kids and progress
+                This will delete all family members and progress
               </p>
             </section>
 
             {/* About */}
             <section className="text-center text-stone-400 text-sm">
-              <p>Quest Cards v0.1.0</p>
-              <p>Built with ❤️ for adventurous families</p>
+              <p>Quest Cards v0.2.0</p>
+              <p>Family Challenge Mode</p>
+              <p className="mt-1">Built with ❤️ for adventurous families</p>
             </section>
           </div>
         )}
       </main>
 
       {/* Navigation */}
-      <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
+      <Navigation 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        pendingCount={pendingApprovals.length + pendingRedemptions.length}
+      />
 
-      {/* Add Kid Modal */}
+      {/* Add Member Modal */}
       <Modal
-        isOpen={showAddKid}
-        onClose={() => setShowAddKid(false)}
-        title="Add a Kid"
+        isOpen={showAddMember}
+        onClose={() => setShowAddMember(false)}
+        title="Add Family Member"
       >
-        <AddKid
-          onAdd={handleAddKid}
-          onCancel={() => setShowAddKid(false)}
+        <AddMember
+          onAdd={handleAddMember}
+          onCancel={() => setShowAddMember(false)}
         />
+      </Modal>
+
+      {/* PIN Pad Modal */}
+      <Modal
+        isOpen={showPinPad}
+        onClose={() => {
+          setShowPinPad(false);
+          setPinAction(null);
+        }}
+      >
+        <PinPad
+          onSubmit={handlePinSubmit}
+          onCancel={() => {
+            setShowPinPad(false);
+            setPinAction(null);
+          }}
+          error={pinError}
+        />
+      </Modal>
+
+      {/* Issue Challenge Modal */}
+      <Modal
+        isOpen={showIssueChallenge}
+        onClose={() => setShowIssueChallenge(false)}
+        title="Issue a Challenge"
+      >
+        {currentMember && (
+          <IssueChallenge
+            issuer={currentMember}
+            recipients={members.filter(m => m.id !== currentMemberId)}
+            onIssue={handleIssueChallenge}
+            onCancel={() => setShowIssueChallenge(false)}
+          />
+        )}
+      </Modal>
+
+      {/* Manage Rewards Modal */}
+      <Modal
+        isOpen={showManageRewards}
+        onClose={() => setShowManageRewards(false)}
+      >
+        {currentMember && isParent && (
+          <ManageRewards
+            owner={currentMember}
+            rewards={myRewards}
+            familyMembers={members}
+            onAddReward={handleAddReward}
+            onUpdateReward={(id, updates) => {
+              updateReward(id, updates);
+              refreshState();
+            }}
+            onDeleteReward={(id) => {
+              deleteReward(id);
+              refreshState();
+            }}
+            onClose={() => setShowManageRewards(false)}
+          />
+        )}
       </Modal>
 
       {/* Challenge Detail Modal */}
@@ -472,15 +735,64 @@ export default function Home() {
             isActive={selectedChallenge.isActive}
             isPendingReview={selectedChallenge.isPending}
             isCompleted={selectedChallenge.isCompleted}
-            customReward={selectedChallenge.customReward}
-            onStart={!activeQuest && !selectedChallenge.isCompleted ? handleStartChallenge : undefined}
+            onStart={isParent && !activeQuest && !selectedChallenge.isCompleted ? handleStartPackChallenge : undefined}
             onMarkDone={selectedChallenge.isActive ? handleMarkDone : undefined}
-            onApprove={selectedChallenge.isPending ? handleApprove : undefined}
-            onReject={selectedChallenge.isPending ? handleReject : undefined}
+            onApprove={selectedChallenge.isPending && isParent ? () => handleApprove(selectedChallenge.questId!) : undefined}
+            onReject={selectedChallenge.isPending && isParent ? () => handleReject(selectedChallenge.questId!) : undefined}
             onAbandon={selectedChallenge.isActive ? handleAbandon : undefined}
           />
         )}
       </Modal>
+    </div>
+  );
+}
+
+// Sub-component for family member cards
+function FamilyMemberCard({ 
+  member, 
+  isSelected, 
+  onSelect, 
+  onRemove 
+}: { 
+  member: FamilyMember;
+  isSelected: boolean;
+  onSelect: () => void;
+  onRemove: () => void;
+}) {
+  const stats = getMemberStats(member.id);
+  
+  return (
+    <div
+      className={`flex items-center gap-3 p-4 rounded-2xl transition-all ${
+        isSelected
+          ? 'bg-amber-100 border-2 border-amber-400'
+          : 'bg-white border-2 border-stone-100 hover:border-stone-200'
+      }`}
+    >
+      <button onClick={onSelect} className="flex items-center gap-3 flex-1 text-left">
+        <span className="text-3xl">{member.avatar}</span>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-stone-800">{member.name}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${
+              member.role === 'parent' 
+                ? 'bg-violet-100 text-violet-700' 
+                : 'bg-amber-100 text-amber-700'
+            }`}>
+              {member.role}
+            </span>
+          </div>
+          <div className="text-sm text-stone-500">
+            ⭐ {member.pointsBalance} pts • {stats.completedCount} quests done
+          </div>
+        </div>
+      </button>
+      <button
+        onClick={onRemove}
+        className="p-2 text-red-400 hover:text-red-600 tap-target"
+      >
+        🗑️
+      </button>
     </div>
   );
 }

@@ -1,13 +1,30 @@
 // Quest Cards - Local Storage Data Layer
-// This can be swapped for Supabase later
+// Updated for Family Challenge Mode
 
-import { Family, Kid, KidChallenge, ChallengeWithDetails } from './types';
+import { 
+  Family, 
+  FamilySettings,
+  FamilyMember, 
+  MemberRole,
+  Quest, 
+  QuestWithDetails, 
+  QuestStatus,
+  Reward,
+  Redemption,
+  RedemptionWithDetails,
+  RedemptionStatus,
+  Challenge,
+  Pack,
+} from './types';
 import { getPack, getChallenge, PACKS } from './packs';
 
 const STORAGE_KEYS = {
-  FAMILY: 'questcards_family',
-  KIDS: 'questcards_kids',
-  KID_CHALLENGES: 'questcards_kid_challenges',
+  FAMILY: 'questcards_family_v2',
+  MEMBERS: 'questcards_members_v2',
+  QUESTS: 'questcards_quests_v2',
+  REWARDS: 'questcards_rewards_v2',
+  REDEMPTIONS: 'questcards_redemptions_v2',
+  CUSTOM_CHALLENGES: 'questcards_custom_challenges_v2',
 };
 
 // ============ Helpers ============
@@ -34,15 +51,23 @@ function setItem<T>(key: string, value: T): void {
 
 // ============ Family ============
 
+const DEFAULT_SETTINGS: FamilySettings = {
+  pointsPerDollar: 10,
+  requirePinForApproval: true,
+  requirePinForRedemption: true,
+};
+
 export function getFamily(): Family | null {
   return getItem<Family | null>(STORAGE_KEYS.FAMILY, null);
 }
 
-export function createFamily(name: string): Family {
+export function createFamily(name: string, pin: string = '1234'): Family {
   const family: Family = {
     id: generateId(),
     name,
+    pin,
     createdAt: new Date().toISOString(),
+    settings: DEFAULT_SETTINGS,
   };
   setItem(STORAGE_KEYS.FAMILY, family);
   return family;
@@ -56,204 +81,513 @@ export function updateFamily(updates: Partial<Family>): Family | null {
   return updated;
 }
 
-// ============ Kids ============
-
-export function getKids(): Kid[] {
-  return getItem<Kid[]>(STORAGE_KEYS.KIDS, []);
+export function updateFamilySettings(settings: Partial<FamilySettings>): Family | null {
+  const family = getFamily();
+  if (!family) return null;
+  family.settings = { ...family.settings, ...settings };
+  setItem(STORAGE_KEYS.FAMILY, family);
+  return family;
 }
 
-export function getKid(kidId: string): Kid | undefined {
-  return getKids().find(k => k.id === kidId);
+export function verifyPin(pin: string): boolean {
+  const family = getFamily();
+  return family?.pin === pin;
 }
 
-export function addKid(name: string, avatar: string): Kid {
+export function changePin(oldPin: string, newPin: string): boolean {
+  if (!verifyPin(oldPin)) return false;
+  const family = getFamily();
+  if (!family) return false;
+  family.pin = newPin;
+  setItem(STORAGE_KEYS.FAMILY, family);
+  return true;
+}
+
+// ============ Family Members ============
+
+export function getMembers(): FamilyMember[] {
+  return getItem<FamilyMember[]>(STORAGE_KEYS.MEMBERS, []);
+}
+
+export function getMember(memberId: string): FamilyMember | undefined {
+  return getMembers().find(m => m.id === memberId);
+}
+
+export function getParents(): FamilyMember[] {
+  return getMembers().filter(m => m.role === 'parent');
+}
+
+export function getChildren(): FamilyMember[] {
+  return getMembers().filter(m => m.role === 'child');
+}
+
+export function addMember(name: string, avatar: string, role: MemberRole): FamilyMember {
   const family = getFamily();
   if (!family) throw new Error('No family exists');
   
-  const kid: Kid = {
+  const member: FamilyMember = {
     id: generateId(),
     familyId: family.id,
     name,
     avatar,
+    role,
     createdAt: new Date().toISOString(),
+    pointsBalance: 0,
   };
   
-  const kids = getKids();
-  kids.push(kid);
-  setItem(STORAGE_KEYS.KIDS, kids);
-  return kid;
+  const members = getMembers();
+  members.push(member);
+  setItem(STORAGE_KEYS.MEMBERS, members);
+  
+  // If this is a parent, initialize their default rewards
+  if (role === 'parent') {
+    initializeDefaultRewards(member.id);
+  }
+  
+  return member;
 }
 
-export function updateKid(kidId: string, updates: Partial<Kid>): Kid | undefined {
-  const kids = getKids();
-  const index = kids.findIndex(k => k.id === kidId);
+export function updateMember(memberId: string, updates: Partial<FamilyMember>): FamilyMember | undefined {
+  const members = getMembers();
+  const index = members.findIndex(m => m.id === memberId);
   if (index === -1) return undefined;
   
-  kids[index] = { ...kids[index], ...updates };
-  setItem(STORAGE_KEYS.KIDS, kids);
-  return kids[index];
+  members[index] = { ...members[index], ...updates };
+  setItem(STORAGE_KEYS.MEMBERS, members);
+  return members[index];
 }
 
-export function removeKid(kidId: string): boolean {
-  const kids = getKids();
-  const filtered = kids.filter(k => k.id !== kidId);
-  if (filtered.length === kids.length) return false;
-  setItem(STORAGE_KEYS.KIDS, filtered);
+export function removeMember(memberId: string): boolean {
+  const members = getMembers();
+  const filtered = members.filter(m => m.id !== memberId);
+  if (filtered.length === members.length) return false;
+  setItem(STORAGE_KEYS.MEMBERS, filtered);
   
-  // Also remove kid's challenges
-  const challenges = getKidChallenges().filter(c => c.kidId !== kidId);
-  setItem(STORAGE_KEYS.KID_CHALLENGES, challenges);
+  // Also remove member's quests and rewards
+  const quests = getQuests().filter(q => q.recipientId !== memberId && q.issuerId !== memberId);
+  setItem(STORAGE_KEYS.QUESTS, quests);
+  
+  const rewards = getRewards().filter(r => r.ownerId !== memberId);
+  setItem(STORAGE_KEYS.REWARDS, rewards);
   
   return true;
 }
 
-// ============ Kid Challenges ============
+// ============ Points ============
 
-export function getKidChallenges(): KidChallenge[] {
-  return getItem<KidChallenge[]>(STORAGE_KEYS.KID_CHALLENGES, []);
+export function addPoints(memberId: string, points: number): number {
+  const member = getMember(memberId);
+  if (!member) return 0;
+  
+  member.pointsBalance += points;
+  updateMember(memberId, { pointsBalance: member.pointsBalance });
+  return member.pointsBalance;
 }
 
-export function getKidChallengesForKid(kidId: string): KidChallenge[] {
-  return getKidChallenges().filter(c => c.kidId === kidId);
+export function deductPoints(memberId: string, points: number): boolean {
+  const member = getMember(memberId);
+  if (!member || member.pointsBalance < points) return false;
+  
+  member.pointsBalance -= points;
+  updateMember(memberId, { pointsBalance: member.pointsBalance });
+  return true;
 }
 
-export function getKidChallengeWithDetails(kidChallenge: KidChallenge): ChallengeWithDetails | null {
-  const pack = getPack(kidChallenge.packSlug);
-  const challenge = getChallenge(kidChallenge.packSlug, kidChallenge.challengeSlug);
-  if (!pack || !challenge) return null;
+// ============ Quests ============
+
+export function getQuests(): Quest[] {
+  return getItem<Quest[]>(STORAGE_KEYS.QUESTS, []);
+}
+
+export function getQuestsForMember(memberId: string): Quest[] {
+  return getQuests().filter(q => q.recipientId === memberId);
+}
+
+export function getQuestsIssuedBy(memberId: string): Quest[] {
+  return getQuests().filter(q => q.issuerId === memberId);
+}
+
+export function getActiveQuest(memberId: string): Quest | null {
+  const quests = getQuestsForMember(memberId);
+  return quests.find(q => q.status === 'active' || q.status === 'pending_review') || null;
+}
+
+export function getPendingApprovals(issuerId: string): Quest[] {
+  return getQuests().filter(q => q.issuerId === issuerId && q.status === 'pending_review');
+}
+
+export function getQuestWithDetails(quest: Quest): QuestWithDetails | null {
+  const issuer = getMember(quest.issuerId);
+  const recipient = getMember(quest.recipientId);
+  if (!issuer || !recipient) return null;
+  
+  let challenge: Challenge | { title: string; description: string; icon: string };
+  let pack: Pack | undefined;
+  
+  if (quest.packSlug && quest.challengeSlug) {
+    pack = getPack(quest.packSlug);
+    const packChallenge = getChallenge(quest.packSlug, quest.challengeSlug);
+    if (!pack || !packChallenge) return null;
+    challenge = packChallenge;
+  } else if (quest.customChallenge) {
+    challenge = quest.customChallenge;
+  } else {
+    return null;
+  }
   
   return {
-    ...kidChallenge,
+    ...quest,
     challenge,
     pack,
+    issuer,
+    recipient,
   };
 }
 
-export function getActiveChallenge(kidId: string): ChallengeWithDetails | null {
-  const challenges = getKidChallengesForKid(kidId);
-  const active = challenges.find(c => c.status === 'active' || c.status === 'pending_review');
-  if (!active) return null;
-  return getKidChallengeWithDetails(active);
-}
-
-export function getCompletedChallenges(kidId: string): ChallengeWithDetails[] {
-  const challenges = getKidChallengesForKid(kidId);
-  return challenges
-    .filter(c => c.status === 'completed')
-    .map(c => getKidChallengeWithDetails(c))
-    .filter((c): c is ChallengeWithDetails => c !== null)
+export function getCompletedQuests(memberId: string): QuestWithDetails[] {
+  const quests = getQuestsForMember(memberId);
+  return quests
+    .filter(q => q.status === 'completed')
+    .map(q => getQuestWithDetails(q))
+    .filter((q): q is QuestWithDetails => q !== null)
     .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime());
 }
 
-export function startChallenge(kidId: string, packSlug: string, challengeSlug: string, customReward?: string): KidChallenge {
-  const kidChallenge: KidChallenge = {
+// Start a quest from a pack
+export function startPackQuest(
+  recipientId: string, 
+  issuerId: string,
+  packSlug: string, 
+  challengeSlug: string
+): Quest {
+  const challenge = getChallenge(packSlug, challengeSlug);
+  if (!challenge) throw new Error('Challenge not found');
+  
+  const quest: Quest = {
     id: generateId(),
-    kidId,
-    challengeSlug,
+    recipientId,
+    issuerId,
     packSlug,
+    challengeSlug,
+    reward: challenge.reward,
     status: 'active',
-    customReward,
     startedAt: new Date().toISOString(),
   };
   
-  const challenges = getKidChallenges();
-  challenges.push(kidChallenge);
-  setItem(STORAGE_KEYS.KID_CHALLENGES, challenges);
-  return kidChallenge;
+  const quests = getQuests();
+  quests.push(quest);
+  setItem(STORAGE_KEYS.QUESTS, quests);
+  return quest;
 }
 
-export function submitChallenge(challengeId: string): KidChallenge | undefined {
-  const challenges = getKidChallenges();
-  const index = challenges.findIndex(c => c.id === challengeId);
-  if (index === -1) return undefined;
+// Issue a custom challenge directly
+export function issueChallenge(
+  recipientId: string,
+  issuerId: string,
+  title: string,
+  description: string,
+  icon: string,
+  reward: number,
+  customRewardText?: string
+): Quest {
+  const quest: Quest = {
+    id: generateId(),
+    recipientId,
+    issuerId,
+    customChallenge: { title, description, icon },
+    reward,
+    customRewardText,
+    status: 'active',
+    startedAt: new Date().toISOString(),
+  };
   
-  challenges[index].status = 'pending_review';
-  challenges[index].submittedAt = new Date().toISOString();
-  setItem(STORAGE_KEYS.KID_CHALLENGES, challenges);
-  return challenges[index];
+  const quests = getQuests();
+  quests.push(quest);
+  setItem(STORAGE_KEYS.QUESTS, quests);
+  return quest;
 }
 
-export function approveChallenge(challengeId: string, parentNotes?: string): KidChallenge | undefined {
-  const challenges = getKidChallenges();
-  const index = challenges.findIndex(c => c.id === challengeId);
+export function submitQuest(questId: string): Quest | undefined {
+  const quests = getQuests();
+  const index = quests.findIndex(q => q.id === questId);
   if (index === -1) return undefined;
   
-  challenges[index].status = 'completed';
-  challenges[index].completedAt = new Date().toISOString();
-  if (parentNotes) challenges[index].parentNotes = parentNotes;
-  setItem(STORAGE_KEYS.KID_CHALLENGES, challenges);
-  return challenges[index];
+  quests[index].status = 'pending_review';
+  quests[index].submittedAt = new Date().toISOString();
+  setItem(STORAGE_KEYS.QUESTS, quests);
+  return quests[index];
 }
 
-export function rejectChallenge(challengeId: string, parentNotes?: string): KidChallenge | undefined {
-  const challenges = getKidChallenges();
-  const index = challenges.findIndex(c => c.id === challengeId);
+export function approveQuest(questId: string, notes?: string): Quest | undefined {
+  const quests = getQuests();
+  const index = quests.findIndex(q => q.id === questId);
   if (index === -1) return undefined;
   
-  challenges[index].status = 'active';
-  challenges[index].submittedAt = undefined;
-  if (parentNotes) challenges[index].parentNotes = parentNotes;
-  setItem(STORAGE_KEYS.KID_CHALLENGES, challenges);
-  return challenges[index];
+  const quest = quests[index];
+  quest.status = 'completed';
+  quest.completedAt = new Date().toISOString();
+  if (notes) quest.verifierNotes = notes;
+  setItem(STORAGE_KEYS.QUESTS, quests);
+  
+  // Award points to recipient
+  addPoints(quest.recipientId, quest.reward);
+  
+  return quest;
 }
 
-export function abandonChallenge(challengeId: string): KidChallenge | undefined {
-  const challenges = getKidChallenges();
-  const index = challenges.findIndex(c => c.id === challengeId);
+export function rejectQuest(questId: string, notes?: string): Quest | undefined {
+  const quests = getQuests();
+  const index = quests.findIndex(q => q.id === questId);
   if (index === -1) return undefined;
   
-  challenges[index].status = 'abandoned';
-  setItem(STORAGE_KEYS.KID_CHALLENGES, challenges);
-  return challenges[index];
+  quests[index].status = 'active';
+  quests[index].submittedAt = undefined;
+  if (notes) quests[index].verifierNotes = notes;
+  setItem(STORAGE_KEYS.QUESTS, quests);
+  return quests[index];
+}
+
+export function abandonQuest(questId: string): Quest | undefined {
+  const quests = getQuests();
+  const index = quests.findIndex(q => q.id === questId);
+  if (index === -1) return undefined;
+  
+  quests[index].status = 'abandoned';
+  setItem(STORAGE_KEYS.QUESTS, quests);
+  return quests[index];
+}
+
+export function hasCompletedChallenge(memberId: string, packSlug: string, challengeSlug: string): boolean {
+  const quests = getQuestsForMember(memberId);
+  return quests.some(
+    q => q.packSlug === packSlug && 
+         q.challengeSlug === challengeSlug && 
+         q.status === 'completed'
+  );
+}
+
+// ============ Rewards ============
+
+export function getRewards(): Reward[] {
+  return getItem<Reward[]>(STORAGE_KEYS.REWARDS, []);
+}
+
+export function getRewardsOwnedBy(memberId: string): Reward[] {
+  return getRewards().filter(r => r.ownerId === memberId && r.active);
+}
+
+export function getRewardsAvailableTo(memberId: string): { owner: FamilyMember; rewards: Reward[] }[] {
+  const rewards = getRewards().filter(r => r.active);
+  const parents = getParents();
+  
+  return parents.map(parent => ({
+    owner: parent,
+    rewards: rewards.filter(r => 
+      r.ownerId === parent.id && 
+      (r.availableTo.length === 0 || r.availableTo.includes(memberId))
+    ),
+  })).filter(group => group.rewards.length > 0);
+}
+
+export function addReward(
+  ownerId: string,
+  name: string,
+  pointCost: number,
+  icon: string = '🎁',
+  description?: string,
+  availableTo: string[] = []
+): Reward {
+  const reward: Reward = {
+    id: generateId(),
+    ownerId,
+    name,
+    description,
+    icon,
+    pointCost,
+    availableTo,
+    isDefault: false,
+    active: true,
+    createdAt: new Date().toISOString(),
+  };
+  
+  const rewards = getRewards();
+  rewards.push(reward);
+  setItem(STORAGE_KEYS.REWARDS, rewards);
+  return reward;
+}
+
+export function updateReward(rewardId: string, updates: Partial<Reward>): Reward | undefined {
+  const rewards = getRewards();
+  const index = rewards.findIndex(r => r.id === rewardId);
+  if (index === -1) return undefined;
+  
+  rewards[index] = { ...rewards[index], ...updates };
+  setItem(STORAGE_KEYS.REWARDS, rewards);
+  return rewards[index];
+}
+
+export function deleteReward(rewardId: string): boolean {
+  const rewards = getRewards();
+  const filtered = rewards.filter(r => r.id !== rewardId);
+  if (filtered.length === rewards.length) return false;
+  setItem(STORAGE_KEYS.REWARDS, filtered);
+  return true;
+}
+
+function initializeDefaultRewards(ownerId: string): void {
+  const defaults = [
+    { name: '$1 allowance', icon: '💵', cost: 10, description: 'One dollar cash' },
+    { name: '$5 allowance', icon: '💵', cost: 50, description: 'Five dollars cash' },
+    { name: 'Pick a movie', icon: '🎬', cost: 30, description: 'Choose what we watch tonight' },
+    { name: 'Screen time +30min', icon: '📱', cost: 20, description: 'Extra screen time' },
+    { name: 'Stay up late +30min', icon: '🌙', cost: 40, description: 'Push bedtime back' },
+    { name: 'Special breakfast', icon: '🥞', cost: 25, description: 'Request your favorite breakfast' },
+  ];
+  
+  const rewards = getRewards();
+  defaults.forEach(d => {
+    rewards.push({
+      id: generateId(),
+      ownerId,
+      name: d.name,
+      description: d.description,
+      icon: d.icon,
+      pointCost: d.cost,
+      availableTo: [], // Available to everyone
+      isDefault: true,
+      active: true,
+      createdAt: new Date().toISOString(),
+    });
+  });
+  setItem(STORAGE_KEYS.REWARDS, rewards);
+}
+
+// ============ Redemptions ============
+
+export function getRedemptions(): Redemption[] {
+  return getItem<Redemption[]>(STORAGE_KEYS.REDEMPTIONS, []);
+}
+
+export function getPendingRedemptions(ownerId: string): RedemptionWithDetails[] {
+  return getRedemptions()
+    .filter(r => r.rewardOwnerId === ownerId && r.status === 'pending')
+    .map(r => getRedemptionWithDetails(r))
+    .filter((r): r is RedemptionWithDetails => r !== null);
+}
+
+export function getRedemptionWithDetails(redemption: Redemption): RedemptionWithDetails | null {
+  const reward = getRewards().find(r => r.id === redemption.rewardId);
+  const owner = getMember(redemption.rewardOwnerId);
+  const claimer = getMember(redemption.claimerId);
+  
+  if (!reward || !owner || !claimer) return null;
+  
+  return { ...redemption, reward, owner, claimer };
+}
+
+export function redeemReward(rewardId: string, claimerId: string): Redemption | null {
+  const reward = getRewards().find(r => r.id === rewardId);
+  const claimer = getMember(claimerId);
+  
+  if (!reward || !claimer) return null;
+  if (claimer.pointsBalance < reward.pointCost) return null;
+  
+  // Deduct points
+  if (!deductPoints(claimerId, reward.pointCost)) return null;
+  
+  const redemption: Redemption = {
+    id: generateId(),
+    rewardId,
+    rewardOwnerId: reward.ownerId,
+    claimerId,
+    pointsSpent: reward.pointCost,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  };
+  
+  const redemptions = getRedemptions();
+  redemptions.push(redemption);
+  setItem(STORAGE_KEYS.REDEMPTIONS, redemptions);
+  
+  return redemption;
+}
+
+export function fulfillRedemption(redemptionId: string): Redemption | undefined {
+  const redemptions = getRedemptions();
+  const index = redemptions.findIndex(r => r.id === redemptionId);
+  if (index === -1) return undefined;
+  
+  redemptions[index].status = 'fulfilled';
+  redemptions[index].fulfilledAt = new Date().toISOString();
+  setItem(STORAGE_KEYS.REDEMPTIONS, redemptions);
+  return redemptions[index];
+}
+
+export function cancelRedemption(redemptionId: string): Redemption | undefined {
+  const redemptions = getRedemptions();
+  const index = redemptions.findIndex(r => r.id === redemptionId);
+  if (index === -1) return undefined;
+  
+  const redemption = redemptions[index];
+  
+  // Refund points
+  addPoints(redemption.claimerId, redemption.pointsSpent);
+  
+  redemption.status = 'cancelled';
+  setItem(STORAGE_KEYS.REDEMPTIONS, redemptions);
+  return redemption;
 }
 
 // ============ Stats ============
 
-export function getKidStats(kidId: string) {
-  const completed = getCompletedChallenges(kidId);
-  
-  // Calculate total earnings (parse money values)
-  let totalEarned = 0;
-  completed.forEach(c => {
-    const reward = c.customReward || c.challenge.reward_value;
-    const match = reward.match(/\$(\d+)/);
-    if (match) {
-      totalEarned += parseInt(match[1], 10);
-    }
-  });
+export function getMemberStats(memberId: string) {
+  const completed = getCompletedQuests(memberId);
+  const member = getMember(memberId);
   
   return {
     completedCount: completed.length,
-    totalEarned,
+    pointsBalance: member?.pointsBalance || 0,
+    totalPointsEarned: completed.reduce((sum, q) => sum + q.reward, 0),
     recentCompletions: completed.slice(0, 5),
   };
 }
 
-// ============ Check if challenge already done ============
-
-export function hasCompletedChallenge(kidId: string, packSlug: string, challengeSlug: string): boolean {
-  const challenges = getKidChallengesForKid(kidId);
-  return challenges.some(
-    c => c.packSlug === packSlug && 
-         c.challengeSlug === challengeSlug && 
-         c.status === 'completed'
-  );
-}
-
-// ============ Reset (for testing) ============
+// ============ Reset & Migration ============
 
 export function resetAllData(): void {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem(STORAGE_KEYS.FAMILY);
-  localStorage.removeItem(STORAGE_KEYS.KIDS);
-  localStorage.removeItem(STORAGE_KEYS.KID_CHALLENGES);
+  Object.values(STORAGE_KEYS).forEach(key => {
+    localStorage.removeItem(key);
+  });
+  // Also clear old v1 keys
+  localStorage.removeItem('questcards_family');
+  localStorage.removeItem('questcards_kids');
+  localStorage.removeItem('questcards_kid_challenges');
 }
-
-// ============ Initialize with demo data ============
 
 export function initializeDemoData(): void {
   if (getFamily()) return; // Already initialized
   
-  createFamily('Our Family');
-  addKid('Demo Kid', '👧');
+  // Create family with default PIN
+  createFamily('The Family', '1234');
+  
+  // Add Zed as parent (will auto-create default rewards)
+  const zed = addMember('Zed', '👨', 'parent');
+  
+  // Add family members
+  addMember('Alex', '👩', 'parent');
+  addMember('Eleanor', '👧', 'child');
+  addMember('Wyatt', '👦', 'child');
+}
+
+// Check if we need to migrate from v1
+export function checkAndMigrate(): boolean {
+  if (getFamily()) return false; // Already on v2
+  
+  const oldFamily = getItem<{ id: string; name: string } | null>('questcards_family', null);
+  if (!oldFamily) return false;
+  
+  // TODO: Implement full migration if needed
+  // For now, just initialize fresh
+  return false;
 }
