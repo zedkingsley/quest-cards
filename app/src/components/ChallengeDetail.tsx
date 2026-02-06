@@ -9,6 +9,7 @@ interface ChallengeDetailProps {
   isActive?: boolean;
   isPendingReview?: boolean;
   isCompleted?: boolean;
+  isQueued?: boolean;
   isParent?: boolean;
   hasActiveQuest?: boolean;
   onStartForSelf?: () => void;
@@ -26,6 +27,7 @@ export function ChallengeDetail({
   isActive = false,
   isPendingReview = false,
   isCompleted = false,
+  isQueued = false,
   isParent = false,
   hasActiveQuest = false,
   onStartForSelf,
@@ -44,7 +46,7 @@ export function ChallengeDetail({
     }
   };
 
-  const canStart = !isActive && !isPendingReview && !isCompleted && !hasActiveQuest;
+  const canStart = !isActive && !isPendingReview && !isCompleted && !isQueued;
 
   return (
     <div className="space-y-6">
@@ -82,6 +84,11 @@ export function ChallengeDetail({
             🎯 In Progress
           </span>
         )}
+        {isQueued && (
+          <span className="px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-700">
+            📋 Queued
+          </span>
+        )}
       </div>
 
       {/* Description */}
@@ -110,13 +117,13 @@ export function ChallengeDetail({
 
       {/* Action buttons */}
       <div className="space-y-3">
-        {/* Kid can start for themselves */}
+        {/* Kid can start/queue for themselves */}
         {!isParent && canStart && onStartForSelf && (
           <button
             onClick={onStartForSelf}
             className="btn btn-primary w-full text-lg py-4"
           >
-            🚀 Start This Quest!
+            {hasActiveQuest ? '📋 Add to Queue' : '🚀 Start This Quest!'}
           </button>
         )}
 
@@ -130,11 +137,14 @@ export function ChallengeDetail({
           </button>
         )}
 
-        {/* Already have active quest warning */}
-        {canStart === false && hasActiveQuest && !isActive && !isPendingReview && !isCompleted && (
-          <div className="bg-stone-100 rounded-xl p-4 text-center">
-            <p className="text-stone-600">
-              {isParent ? 'This child already has' : 'You already have'} an active quest. Complete it first!
+        {/* Already queued */}
+        {isQueued && (
+          <div className="bg-blue-50 rounded-xl p-4 text-center border border-blue-200">
+            <p className="text-blue-700 font-semibold">
+              📋 This quest is in your queue!
+            </p>
+            <p className="text-blue-600 text-sm mt-1">
+              It will start automatically when your current quest is done.
             </p>
           </div>
         )}

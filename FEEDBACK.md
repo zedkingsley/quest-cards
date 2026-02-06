@@ -1,40 +1,71 @@
 # Quest Cards Feedback Log
 
-## Round 1 — 2026-02-05
+---
 
-### F1: Member Switcher UX
-**Issue:** "Who's playing" toggle on home screen is awkward
-**Desired:** Click avatar in header → dropdown to switch members
-**Status:** 🔄 In Progress
+## Round 2 — 2026-02-05 ✅
 
-### F2: Parent Can't Add Quest When Reward Pending
-**Issue:** As Zed (parent), couldn't add active quest while there was a reward to fulfill
-**Type:** Bug
-**Status:** 🔄 Investigating
+### F6: Logo → Home Navigation ✅
+**Issue:** Clicking "Quest Cards" logo should navigate to home
+**Solution:** Made logo a button that sets activeTab to 'home'
+**Status:** ✅ Done
 
-### F3: Kids Should Pick Their Own Challenges
-**Issue:** Kids can't browse packs and select challenges for themselves
-**Desired:** Kids browse packs → select challenge → it becomes their active quest
-**Status:** 🔄 In Progress
+### F7: Profile Switch → Home ✅
+**Issue:** Switching profiles should auto-navigate to home
+**Solution:** `handleMemberSwitch()` now sets activeTab to 'home' after switching
+**Status:** ✅ Done
 
-### F4: Parents Should Edit Pack Challenges
-**Issue:** Parents can't add/delete challenges from pack categories
-**Desired:** Parent can customize any pack (add custom challenges, hide built-in ones)
-**Status:** 🔄 In Progress
+### F8: Quest Queue System ✅
+**Issue:** Kids should queue multiple quests, current shown expanded on home
+**Solution:** 
+- Added 'queued' status to QuestStatus type
+- New `getQueuedQuests()` function
+- When starting quest with active one, auto-queues instead
+- Approving quest auto-activates next in queue
+- Home shows expanded current quest + queued list
+- ChallengeCard/ChallengeDetail show "Queued" state
+**Status:** ✅ Done
 
-### F5: Family Tab Overkill
-**Issue:** Bottom nav "Family" tab takes too much real estate
-**Desired:** Move family management to Settings
-**Status:** 🔄 In Progress
+### F9: "I Did It" → Parent Handoff ✅
+**Issue:** After marking done, prompt parent to approve immediately or later
+**Solution:**
+- New `ApprovalHandoff` component
+- Shows after kid marks done: "Hand to parent!" + PIN pad option
+- Parent can approve now (enter PIN) or dismiss to approve later
+**Status:** ✅ Done
+
+### F10: Points → Shop Shortcut ✅
+**Issue:** Tapping points should navigate to Shop
+**Solution:** Points display in header and stats card are now clickable, navigate to shop tab
+**Status:** ✅ Done
 
 ---
 
-## Process
+## Round 1 — 2026-02-05 ✅
 
-For each feedback item:
-1. **Understand** — What's the actual problem?
-2. **Design** — What's the solution?
-3. **Critique** — What could go wrong?
-4. **Improve** — Make it better
-5. **Execute** — Build it
-6. **Verify** — Does it work?
+### F1: Member Switcher UX ✅
+### F2: Parent Quest Assignment Bug ✅
+### F3: Kids Pick Own Challenges ✅
+### F4: Pack Customization ⏸️ (Deferred)
+### F5: Family Tab → Settings ✅
+
+---
+
+## Decisions Log
+
+| Round | ID | Decision | Rationale |
+|-------|-----|----------|-----------|
+| 1 | D5 | 4-tab navigation | Family management is infrequent |
+| 1 | D6 | Header avatar picker modal | Big tap targets, clear info |
+| 1 | D7 | Kids start their own quests | Agency for kids |
+| 1 | D8 | Explicit child picker for parents | Clarity worth one tap |
+| 1 | D9 | Defer pack customization | MVP sufficient |
+| 2 | D10 | Quest queueing auto-activates | Seamless flow, no manual "start next" |
+| 2 | D11 | Handoff modal is optional | Parent can approve later, kid continues |
+| 2 | D12 | Expanded current quest on home | Most important info deserves prominence |
+
+---
+
+## Code Cleanup (Round 2)
+- ✅ Deleted `AddKid.tsx` (replaced by `AddMember.tsx`)
+- ✅ Deleted `KidSelector.tsx` (replaced by `MemberSelector.tsx`)
+- ✅ Version bumped to 0.3.0

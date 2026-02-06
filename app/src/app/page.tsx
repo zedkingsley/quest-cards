@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { FamilyMember, Pack, Challenge, QuestWithDetails, MemberRole } from '@/lib/types';
+import { FamilyMember, Pack, Challenge, QuestWithDetails, MemberRole, Quest } from '@/lib/types';
 import { PACKS } from '@/lib/packs';
 import {
   getFamily,
@@ -10,6 +10,7 @@ import {
   addMember,
   removeMember,
   getActiveQuest,
+  getQueuedQuests,
   getCompletedQuests,
   getMemberStats,
   startPackQuest,
@@ -46,6 +47,7 @@ import { ManageRewards } from '@/components/ManageRewards';
 import { PendingApprovals } from '@/components/PendingApprovals';
 import { MemberPickerModal } from '@/components/MemberPickerModal';
 import { ChildPickerModal } from '@/components/ChildPickerModal';
+import { ApprovalHandoff } from '@/components/ApprovalHandoff';
 
 export default function Home() {
   // Core state
@@ -64,6 +66,8 @@ export default function Home() {
   const [showIssueChallenge, setShowIssueChallenge] = useState(false);
   const [showManageRewards, setShowManageRewards] = useState(false);
   const [showChildPicker, setShowChildPicker] = useState(false);
+  const [showApprovalHandoff, setShowApprovalHandoff] = useState(false);
+  const [pendingHandoffQuest, setPendingHandoffQuest] = useState<Quest | null>(null);
   const [pendingAssignment, setPendingAssignment] = useState<{ pack: Pack; challenge: Challenge } | null>(null);
   const [selectedChallenge, setSelectedChallenge] = useState<{
     challenge: Challenge;
@@ -71,6 +75,7 @@ export default function Home() {
     isActive?: boolean;
     isPending?: boolean;
     isCompleted?: boolean;
+    isQueued?: boolean;
     questId?: string;
   } | null>(null);
   
@@ -82,6 +87,10 @@ export default function Home() {
   
   const activeQuest = currentMemberId ? getActiveQuest(currentMemberId) : null;
   const activeQuestDetails = activeQuest ? getQuestWithDetails(activeQuest) : null;
+  const queuedQuests = currentMemberId ? getQueuedQuests(currentMemberId) : [];
+  const queuedQuestsDetails = queuedQuests
+    .map(q => getQuestWithDetails(q))
+    .filter((q): q is QuestWithDetails => q !== null);
   const memberStats = currentMemberId ? getMemberStats(currentMemberId) : null;
   
   // Parent-specific data
@@ -110,7 +119,6 @@ export default function Home() {
     const loadedMembers = getMembers();
     setMembers(loadedMembers);
     
-    // Select first member if available
     if (loadedMembers.length > 0) {
       setCurrentMemberId(loadedMembers[0].id);
     }
@@ -122,6 +130,12 @@ export default function Home() {
   const refreshState = useCallback(() => {
     setMembers(getMembers());
   }, []);
+
+  // Switch member and go home (F7)
+  const handleMemberSwitch = (memberId: string) => {
+    setCurrentMemberId(memberId);
+    setActiveTab('home');
+  };
 
   // PIN verification wrapper
   const requirePin = (action: () => void) => {
@@ -169,11 +183,10 @@ export default function Home() {
     }
   };
 
-  // Child starts quest for themselves
+  // Child starts/queues quest for themselves
   const handleStartForSelf = () => {
     if (!currentMemberId || !selectedChallenge || isParent) return;
     
-    // Find a parent to be the issuer (use first parent)
     const issuer = parents[0];
     if (!issuer) return;
     
@@ -216,11 +229,29 @@ export default function Home() {
     refreshState();
   };
 
+  // Kid marks quest done (F9: shows handoff modal)
   const handleMarkDone = () => {
     if (!activeQuest) return;
     submitQuest(activeQuest.id);
-    setSelectedChallenge(null);
     refreshState();
+    
+    // Show handoff modal for kids
+    if (!isParent) {
+      setPendingHandoffQuest(activeQuest);
+      setShowApprovalHandoff(true);
+    }
+    setSelectedChallenge(null);
+  };
+
+  // Immediate approval from handoff modal (F9)
+  const handleHandoffApprove = (pin: string): boolean => {
+    if (!verifyPin(pin) || !pendingHandoffQuest) return false;
+    
+    approveQuest(pendingHandoffQuest.id);
+    setShowApprovalHandoff(false);
+    setPendingHandoffQuest(null);
+    refreshState();
+    return true;
   };
 
   const handleApprove = (questId: string) => {
@@ -278,6 +309,7 @@ export default function Home() {
     const isCompleted = hasCompletedChallenge(currentMemberId, pack.slug, challenge.slug);
     const isActive = activeQuest?.packSlug === pack.slug && activeQuest?.challengeSlug === challenge.slug;
     const isPending = isActive && activeQuest?.status === 'pending_review';
+    const isQueued = queuedQuests.some(q => q.packSlug === pack.slug && q.challengeSlug === challenge.slug);
     
     setSelectedChallenge({
       challenge,
@@ -285,6 +317,7 @@ export default function Home() {
       isActive: isActive && !isPending,
       isPending,
       isCompleted: isCompleted && !isActive,
+      isQueued,
       questId: isActive ? activeQuest?.id : undefined,
     });
   };
@@ -309,9 +342,13 @@ export default function Home() {
       {/* Header */}
       <header className="sticky top-0 bg-amber-500 text-white px-4 py-4 shadow-lg z-10">
         <div className="max-w-lg mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          {/* F6: Logo → Home */}
+          <button 
+            onClick={() => setActiveTab('home')}
+            className="text-2xl font-bold flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
             <span>⭐</span> Quest Cards
-          </h1>
+          </button>
           {currentMember && (
             <button 
               onClick={() => setShowMemberPicker(true)}
@@ -320,7 +357,16 @@ export default function Home() {
               <span className="text-2xl">{currentMember.avatar}</span>
               <div className="text-left">
                 <div className="font-semibold text-sm leading-tight">{currentMember.name}</div>
-                <div className="text-amber-200 text-xs">⭐{currentMember.pointsBalance}</div>
+                {/* F10: Points → Shop */}
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveTab('shop');
+                  }}
+                  className="text-amber-200 text-xs hover:text-white transition-colors"
+                >
+                  ⭐{currentMember.pointsBalance}
+                </button>
               </div>
             </button>
           )}
@@ -371,22 +417,53 @@ export default function Home() {
                   </section>
                 )}
 
-                {/* Active Quest */}
+                {/* F8: Current Quest - Expanded */}
                 {activeQuestDetails ? (
                   <section>
-                    <h2 className="text-lg font-bold text-stone-700 mb-3">Current Quest</h2>
-                    <ActiveQuest
-                      quest={{
-                        ...activeQuestDetails,
-                        challenge: activeQuestDetails.challenge as Challenge,
-                        pack: activeQuestDetails.pack || { slug: 'custom', name: 'Custom', icon: '⭐', description: '', category: 'custom', challenges: [], isBuiltIn: false },
-                      }}
+                    <h2 className="text-lg font-bold text-stone-700 mb-3">
+                      {activeQuestDetails.status === 'pending_review' ? '⏳ Awaiting Approval' : '🎯 Current Quest'}
+                    </h2>
+                    <div 
                       onClick={() => {
                         if (activeQuestDetails.pack) {
                           openChallengeDetail(activeQuestDetails.challenge as Challenge, activeQuestDetails.pack);
                         }
                       }}
-                    />
+                      className={`rounded-3xl p-5 cursor-pointer transition-all ${
+                        activeQuestDetails.status === 'pending_review'
+                          ? 'bg-gradient-to-br from-violet-50 to-purple-50 border-2 border-violet-300'
+                          : 'bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300'
+                      }`}
+                    >
+                      <div className="flex items-start gap-4">
+                        <span className="text-5xl">{activeQuestDetails.challenge.icon}</span>
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold text-stone-800 mb-1">
+                            {activeQuestDetails.challenge.title}
+                          </h3>
+                          <p className="text-stone-600 text-sm mb-2">
+                            {activeQuestDetails.challenge.description}
+                          </p>
+                          <div className="flex items-center gap-3">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              activeQuestDetails.status === 'pending_review'
+                                ? 'bg-violet-200 text-violet-700'
+                                : 'bg-amber-200 text-amber-700'
+                            }`}>
+                              {activeQuestDetails.status === 'pending_review' ? 'Waiting for approval' : 'In progress'}
+                            </span>
+                            <span className="text-amber-600 font-bold">
+                              🎁 {activeQuestDetails.reward} pts
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      {activeQuestDetails.status === 'active' && (
+                        <p className="text-center text-amber-600 text-sm mt-3">
+                          Tap to mark done or see details →
+                        </p>
+                      )}
+                    </div>
                   </section>
                 ) : (
                   <section className="text-center py-8 bg-stone-50 rounded-3xl">
@@ -404,13 +481,41 @@ export default function Home() {
                   </section>
                 )}
 
+                {/* F8: Queued Quests */}
+                {queuedQuestsDetails.length > 0 && (
+                  <section>
+                    <h2 className="text-lg font-bold text-stone-700 mb-3">
+                      📋 Up Next ({queuedQuestsDetails.length})
+                    </h2>
+                    <div className="space-y-2">
+                      {queuedQuestsDetails.map((quest) => (
+                        <div
+                          key={quest.id}
+                          className="flex items-center gap-3 bg-white rounded-xl p-3 border border-stone-100"
+                        >
+                          <span className="text-2xl">{quest.challenge.icon}</span>
+                          <div className="flex-1">
+                            <p className="font-semibold text-stone-700">{quest.challenge.title}</p>
+                            <p className="text-xs text-stone-400">{quest.pack?.name || 'Custom'}</p>
+                          </div>
+                          <span className="text-amber-500 font-bold text-sm">{quest.reward} ⭐</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+
                 {/* Quick Stats */}
                 {memberStats && (
                   <section className="grid grid-cols-2 gap-4">
-                    <div className="bg-amber-50 rounded-2xl p-4 text-center border-2 border-amber-100">
+                    {/* F10: Points → Shop */}
+                    <button
+                      onClick={() => setActiveTab('shop')}
+                      className="bg-amber-50 rounded-2xl p-4 text-center border-2 border-amber-100 hover:border-amber-300 transition-colors"
+                    >
                       <div className="text-3xl font-bold text-amber-600">⭐ {memberStats.pointsBalance}</div>
                       <div className="text-sm text-amber-600">Points</div>
-                    </div>
+                    </button>
                     <div className="bg-emerald-50 rounded-2xl p-4 text-center border-2 border-emerald-100">
                       <div className="text-3xl font-bold text-emerald-600">{memberStats.completedCount}</div>
                       <div className="text-sm text-emerald-600">Quests Done</div>
@@ -455,7 +560,6 @@ export default function Home() {
             )}
 
             {selectedPack ? (
-              // Show challenges in selected pack
               <>
                 <button
                   onClick={() => setSelectedPack(null)}
@@ -474,20 +578,25 @@ export default function Home() {
                 </div>
 
                 <div className="space-y-3">
-                  {selectedPack.challenges.map((challenge) => (
-                    <ChallengeCard
-                      key={challenge.slug}
-                      challenge={challenge}
-                      packIcon={selectedPack.icon}
-                      completed={currentMemberId ? hasCompletedChallenge(currentMemberId, selectedPack.slug, challenge.slug) : false}
-                      isActive={activeQuest?.packSlug === selectedPack.slug && activeQuest?.challengeSlug === challenge.slug}
-                      onClick={() => openChallengeDetail(challenge, selectedPack)}
-                    />
-                  ))}
+                  {selectedPack.challenges.map((challenge) => {
+                    const isQueued = queuedQuests.some(q => 
+                      q.packSlug === selectedPack.slug && q.challengeSlug === challenge.slug
+                    );
+                    return (
+                      <ChallengeCard
+                        key={challenge.slug}
+                        challenge={challenge}
+                        packIcon={selectedPack.icon}
+                        completed={currentMemberId ? hasCompletedChallenge(currentMemberId, selectedPack.slug, challenge.slug) : false}
+                        isActive={activeQuest?.packSlug === selectedPack.slug && activeQuest?.challengeSlug === challenge.slug}
+                        isQueued={isQueued}
+                        onClick={() => openChallengeDetail(challenge, selectedPack)}
+                      />
+                    );
+                  })}
                 </div>
               </>
             ) : (
-              // Show all packs
               <>
                 <h2 className="text-2xl font-bold text-stone-800">Quest Packs</h2>
                 <p className="text-stone-500">
@@ -525,7 +634,6 @@ export default function Home() {
             </div>
             
             {isParent ? (
-              // Parent view - manage rewards
               <div className="space-y-4">
                 <p className="text-stone-500">
                   Manage your reward shop. Switch to a child (tap your avatar) to see their shop view.
@@ -542,7 +650,6 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              // Child view - redeem rewards
               <RewardShop
                 viewer={currentMember}
                 rewardGroups={availableRewards}
@@ -557,7 +664,6 @@ export default function Home() {
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-stone-800">Settings</h2>
             
-            {/* Family Info */}
             <section className="bg-white rounded-2xl p-4 border border-stone-100">
               <h3 className="font-bold text-stone-700 mb-3">Family</h3>
               <p className="text-stone-600">{getFamily()?.name || 'My Family'}</p>
@@ -566,7 +672,6 @@ export default function Home() {
               </p>
             </section>
 
-            {/* Manage Family Members */}
             <section className="bg-white rounded-2xl p-4 border border-stone-100">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold text-stone-700">Family Members</h3>
@@ -609,7 +714,6 @@ export default function Home() {
               </div>
             </section>
 
-            {/* Points Settings */}
             <section className="bg-white rounded-2xl p-4 border border-stone-100">
               <h3 className="font-bold text-stone-700 mb-3">Points</h3>
               <p className="text-stone-600">
@@ -617,7 +721,6 @@ export default function Home() {
               </p>
             </section>
 
-            {/* Danger Zone */}
             <section className="bg-red-50 rounded-2xl p-4 border border-red-100">
               <h3 className="font-bold text-red-700 mb-3">Danger Zone</h3>
               <button
@@ -631,9 +734,8 @@ export default function Home() {
               </p>
             </section>
 
-            {/* About */}
             <section className="text-center text-stone-400 text-sm">
-              <p>Quest Cards v0.2.0</p>
+              <p>Quest Cards v0.3.0</p>
               <p>Family Challenge Mode</p>
               <p className="mt-1">Built with ❤️ for adventurous families</p>
             </section>
@@ -648,13 +750,13 @@ export default function Home() {
         pendingCount={pendingApprovals.length + pendingRedemptions.length}
       />
 
-      {/* Member Picker Modal */}
+      {/* Member Picker Modal (F7: switches and goes home) */}
       <MemberPickerModal
         isOpen={showMemberPicker}
         onClose={() => setShowMemberPicker(false)}
         members={members}
         currentMemberId={currentMemberId}
-        onSelect={setCurrentMemberId}
+        onSelect={handleMemberSwitch}
       />
 
       {/* Add Member Modal */}
@@ -687,6 +789,31 @@ export default function Home() {
         />
       </Modal>
 
+      {/* F9: Approval Handoff Modal */}
+      <Modal
+        isOpen={showApprovalHandoff}
+        onClose={() => {
+          setShowApprovalHandoff(false);
+          setPendingHandoffQuest(null);
+        }}
+      >
+        {pendingHandoffQuest && currentMember && (
+          <ApprovalHandoff
+            childName={currentMember.name}
+            questTitle={
+              activeQuestDetails?.challenge?.title || 
+              pendingHandoffQuest.customChallenge?.title || 
+              'Quest'
+            }
+            onApproveNow={handleHandoffApprove}
+            onLater={() => {
+              setShowApprovalHandoff(false);
+              setPendingHandoffQuest(null);
+            }}
+          />
+        )}
+      </Modal>
+
       {/* Issue Challenge Modal */}
       <Modal
         isOpen={showIssueChallenge}
@@ -703,7 +830,7 @@ export default function Home() {
         )}
       </Modal>
 
-      {/* Child Picker Modal (for parent quest assignment) */}
+      {/* Child Picker Modal */}
       <ChildPickerModal
         isOpen={showChildPicker}
         onClose={() => {
@@ -753,6 +880,7 @@ export default function Home() {
             isActive={selectedChallenge.isActive}
             isPendingReview={selectedChallenge.isPending}
             isCompleted={selectedChallenge.isCompleted}
+            isQueued={selectedChallenge.isQueued}
             isParent={isParent}
             hasActiveQuest={!!activeQuest}
             onStartForSelf={!isParent ? handleStartForSelf : undefined}

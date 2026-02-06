@@ -53,7 +53,7 @@ export interface Challenge {
   createdBy?: string;       // Member ID if custom
 }
 
-export type QuestStatus = 'active' | 'pending_review' | 'completed' | 'abandoned';
+export type QuestStatus = 'queued' | 'active' | 'pending_review' | 'completed' | 'abandoned';
 
 export interface Quest {
   id: string;

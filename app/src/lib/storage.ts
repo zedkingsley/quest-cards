@@ -212,6 +212,17 @@ export function getActiveQuest(memberId: string): Quest | null {
   return quests.find(q => q.status === 'active' || q.status === 'pending_review') || null;
 }
 
+export function getQueuedQuests(memberId: string): Quest[] {
+  return getQuestsForMember(memberId)
+    .filter(q => q.status === 'queued')
+    .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+}
+
+export function hasActiveOrPendingQuest(memberId: string): boolean {
+  const quests = getQuestsForMember(memberId);
+  return quests.some(q => q.status === 'active' || q.status === 'pending_review');
+}
+
 export function getPendingApprovals(issuerId: string): Quest[] {
   return getQuests().filter(q => q.issuerId === issuerId && q.status === 'pending_review');
 }
@@ -253,7 +264,7 @@ export function getCompletedQuests(memberId: string): QuestWithDetails[] {
     .sort((a, b) => new Date(b.completedAt!).getTime() - new Date(a.completedAt!).getTime());
 }
 
-// Start a quest from a pack
+// Start a quest from a pack (or queue it if already have active)
 export function startPackQuest(
   recipientId: string, 
   issuerId: string,
@@ -263,6 +274,9 @@ export function startPackQuest(
   const challenge = getChallenge(packSlug, challengeSlug);
   if (!challenge) throw new Error('Challenge not found');
   
+  // Check if already has active/pending quest - if so, queue it
+  const shouldQueue = hasActiveOrPendingQuest(recipientId);
+  
   const quest: Quest = {
     id: generateId(),
     recipientId,
@@ -270,7 +284,7 @@ export function startPackQuest(
     packSlug,
     challengeSlug,
     reward: challenge.reward,
-    status: 'active',
+    status: shouldQueue ? 'queued' : 'active',
     startedAt: new Date().toISOString(),
   };
   
@@ -327,11 +341,20 @@ export function approveQuest(questId: string, notes?: string): Quest | undefined
   quest.status = 'completed';
   quest.completedAt = new Date().toISOString();
   if (notes) quest.verifierNotes = notes;
-  setItem(STORAGE_KEYS.QUESTS, quests);
   
   // Award points to recipient
   addPoints(quest.recipientId, quest.reward);
   
+  // Activate next queued quest if any
+  const nextQueued = quests.find(q => 
+    q.recipientId === quest.recipientId && 
+    q.status === 'queued'
+  );
+  if (nextQueued) {
+    nextQueued.status = 'active';
+  }
+  
+  setItem(STORAGE_KEYS.QUESTS, quests);
   return quest;
 }
 
