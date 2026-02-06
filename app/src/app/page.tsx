@@ -183,16 +183,18 @@ export default function Home() {
     }
   };
 
-  // Child starts/queues quest for themselves
+  // Anyone starts/queues quest for themselves
   const handleStartForSelf = () => {
-    if (!currentMemberId || !selectedChallenge || isParent) return;
+    if (!currentMemberId || !selectedChallenge) return;
     
-    const issuer = parents[0];
-    if (!issuer) return;
+    // For parents starting for themselves, they are the issuer
+    // For kids, use the first parent as issuer
+    const issuerId = isParent ? currentMemberId : parents[0]?.id;
+    if (!issuerId) return;
     
     startPackQuest(
       currentMemberId,
-      issuer.id,
+      issuerId,
       selectedChallenge.pack.slug,
       selectedChallenge.challenge.slug
     );
@@ -425,9 +427,36 @@ export default function Home() {
                     </h2>
                     <div 
                       onClick={() => {
-                        if (activeQuestDetails.pack) {
-                          openChallengeDetail(activeQuestDetails.challenge as Challenge, activeQuestDetails.pack);
-                        }
+                        // Create a synthetic pack for custom challenges
+                        const pack = activeQuestDetails.pack || {
+                          slug: 'custom',
+                          name: 'Custom Challenge',
+                          icon: '⭐',
+                          description: '',
+                          category: 'custom' as const,
+                          challenges: [],
+                          isBuiltIn: false,
+                        };
+                        const challenge: Challenge = {
+                          slug: activeQuestDetails.id,
+                          title: activeQuestDetails.challenge.title,
+                          description: activeQuestDetails.challenge.description,
+                          icon: activeQuestDetails.challenge.icon,
+                          difficulty: 'slug' in activeQuestDetails.challenge ? activeQuestDetails.challenge.difficulty : 'medium',
+                          reward: activeQuestDetails.reward,
+                          time_estimate: 'slug' in activeQuestDetails.challenge ? activeQuestDetails.challenge.time_estimate : '',
+                        };
+                        
+                        const isPending = activeQuestDetails.status === 'pending_review';
+                        setSelectedChallenge({
+                          challenge,
+                          pack,
+                          isActive: !isPending,
+                          isPending,
+                          isCompleted: false,
+                          isQueued: false,
+                          questId: activeQuestDetails.id,
+                        });
                       }}
                       className={`rounded-3xl p-5 cursor-pointer transition-all ${
                         activeQuestDetails.status === 'pending_review'
@@ -883,7 +912,8 @@ export default function Home() {
             isQueued={selectedChallenge.isQueued}
             isParent={isParent}
             hasActiveQuest={!!activeQuest}
-            onStartForSelf={!isParent ? handleStartForSelf : undefined}
+            hasChildren={children.length > 0}
+            onStartForSelf={handleStartForSelf}
             onAssignTo={isParent ? () => {
               setPendingAssignment({ pack: selectedChallenge.pack, challenge: selectedChallenge.challenge });
               setShowChildPicker(true);

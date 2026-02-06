@@ -2,6 +2,26 @@
 
 ---
 
+## Round 3 — 2026-02-05 ✅
+
+### F11: Parents Can't Start Quests for Themselves ✅
+**Issue:** As Zed (parent), can't choose a challenge for himself - only "Assign to..." for kids
+**Solution:**
+- Removed `isParent` check from `handleStartForSelf`
+- Parents now see two buttons: "Start for Myself" AND "Assign to a child..."
+- Parent is their own issuer when starting for self
+**Status:** ✅ Fixed
+
+### F12: Active Quest Not Clickable ✅
+**Issue:** As Alex with active task, clicking "Tap to mark done" did nothing
+**Root Cause:** onClick only fired if `pack` existed; custom challenges had no pack
+**Solution:**
+- Created synthetic pack/challenge for custom challenges on click
+- Now properly opens detail modal for all quest types
+**Status:** ✅ Fixed
+
+---
+
 ## Round 2 — 2026-02-05 ✅
 
 ### F6: Logo → Home Navigation ✅

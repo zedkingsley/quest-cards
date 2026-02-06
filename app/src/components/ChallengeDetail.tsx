@@ -18,6 +18,7 @@ interface ChallengeDetailProps {
   onApprove?: () => void;
   onReject?: () => void;
   onAbandon?: () => void;
+  hasChildren?: boolean; // whether there are children to assign to
 }
 
 export function ChallengeDetail({
@@ -36,6 +37,7 @@ export function ChallengeDetail({
   onApprove,
   onReject,
   onAbandon,
+  hasChildren = true,
 }: ChallengeDetailProps) {
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -127,14 +129,26 @@ export function ChallengeDetail({
           </button>
         )}
 
-        {/* Parent can assign to a child */}
-        {isParent && canStart && onAssignTo && (
-          <button
-            onClick={onAssignTo}
-            className="btn btn-primary w-full text-lg py-4"
-          >
-            📋 Assign to...
-          </button>
+        {/* Parent options: start for self AND/OR assign to child */}
+        {isParent && canStart && (
+          <div className="space-y-2">
+            {onStartForSelf && (
+              <button
+                onClick={onStartForSelf}
+                className="btn btn-primary w-full text-lg py-4"
+              >
+                {hasActiveQuest ? '📋 Add to My Queue' : '🚀 Start for Myself'}
+              </button>
+            )}
+            {onAssignTo && hasChildren && (
+              <button
+                onClick={onAssignTo}
+                className="btn btn-outline w-full py-3"
+              >
+                👧 Assign to a child...
+              </button>
+            )}
+          </div>
         )}
 
         {/* Already queued */}
